@@ -48,12 +48,7 @@ spec:
           - mountPath: /kerberos/acl.ldif
             name: kdc-conf
             subPath: acl.ldif
-          - name: {{ .Values.ldap.persistence.name }}
-            mountPath: /var/lib/ldap
-            subPath: data
-          - name: {{ .Values.ldap.persistence.name }}
-            mountPath: /etc/ldap/slapd.d
-            subPath: config-data
+{{ include "kerberos.volumeMountsLdap" . | indent 10 }}
         - name: add-users
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
@@ -84,31 +79,20 @@ spec:
           - mountPath: /ldap/users.ldif
             name: users-conf
             subPath: users.ldif
-          - mountPath: /etc/krb5/kdc.conf
-            name: kdc-conf
-            subPath: kdc.conf
-          - mountPath: /etc/krb5kdc/kdc.conf
-            name: kdc-conf
-            subPath: kdc.conf
-          - mountPath: /etc/krb5.conf 
-            name: krb5-conf
-            subPath: krb5.conf
-          - name: {{ .Values.kdc.persistence.name }}
-            mountPath: /var/kerberos/krb5kdc
-          - name: {{ .Values.ldap.persistence.name }} 
-            mountPath: /var/lib/ldap
-            subPath: data
-          - name: {{ .Values.ldap.persistence.name }} 
-            mountPath: /etc/ldap/slapd.d
-            subPath: config-data
+{{ include "kerberos.volumeMountsLdap" . | indent 10 }}
+{{ include "kerberos.volumeMountsKrb" . | indent 10 }}
         - name: init-db
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command:
-            - /init_db.sh
-          args:
-            - "$(REALM)"
-            - "$(MASTER_PASSWORD)"
+            - /bin/sh
+            - -c
+            - |-
+              /scripts/start-slapd.sh
+              /init_db.sh "$(REALM)" "$(MASTER_PASSWORD)"
+          # args:
+          #   - "$(REALM)"
+          #   - "$(MASTER_PASSWORD)"
           env:
           - name: REALM
             value: {{ .Values.krb5.default_realm | upper }}
@@ -118,17 +102,8 @@ spec:
                 name: {{ template "kerberos.fullname" . }}
                 key: master-password
           volumeMounts:
-          - mountPath: /etc/krb5kdc/kdc.conf
-            name: kdc-conf
-            subPath: kdc.conf
-          - mountPath: /var/kerberos/krb5kdc
-            name: {{ .Values.kdc.persistence.name }}
-          - name: {{ .Values.ldap.persistence.name }} 
-            mountPath: /var/lib/ldap
-            subPath: data
-          - name: {{ .Values.ldap.persistence.name }} 
-            mountPath: /etc/ldap/slapd.d
-            subPath: config-data
+{{ include "kerberos.volumeMountsLdap" . | indent 10 }}
+{{ include "kerberos.volumeMountsKrb" . | indent 10 }}
         - name: generate-keytab
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
@@ -136,11 +111,29 @@ spec:
             - /bin/sh
             - -c
             - |-
-
+              /scripts/start-slapd.sh
+             
               kadmin.local -q "addprinc -randkey HTTP/{{ .Values.global.serverName }}.kerberos.svc.cluster.local@{{ .Values.krb5.default_realm | upper }}"
               kadmin.local -q "ktadd -k /tmp/http_srv.keytab  HTTP/{{ .Values.global.serverName }}.kerberos.svc.cluster.local@{{ .Values.krb5.default_realm | upper }}"
               kadmin.local -q 'addprinc -randkey admin/admin'
               kadmin.local -q "ktadd -k /tmp/admin.keytab admin/admin"
+
+              kadmin.local -q "addprinc -x dn="uid=john,ou=People,{{ .Values.ldap.basedn }}" john" <<EOF 
+              johnldap
+              johnldap
+              EOF
+              kadmin.local -q "addprinc -x dn="uid=george,ou=People,{{ .Values.ldap.basedn }}" george" <<EOF 
+              georgeldap
+              georgeldap
+              EOF
+              kadmin.local -q "addprinc -x dn="uid=tkelly,ou=People,{{ .Values.ldap.basedn }}" tkelly" <<EOF 
+              tkellyldap
+              tkellyldap
+              EOF
+              kadmin.local -q "addprinc -x dn="uid=tlabonte,ou=People,{{ .Values.ldap.basedn }}" tlabonte" <<EOF 
+              tlabonteldap
+              tlabonteldap
+              EOF
 
               # delete
               kubectl --namespace {{ .Release.Namespace }} delete configmap {{ .Values.keytab.configmap }} --|| true
@@ -156,23 +149,8 @@ spec:
                 name: {{ template "kerberos.fullname" . }}
                 key: master-password
           volumeMounts:
-          - mountPath: /etc/krb5/kdc.conf
-            name: kdc-conf
-            subPath: kdc.conf
-          - mountPath: /etc/krb5kdc/kdc.conf
-            name: kdc-conf
-            subPath: kdc.conf
-          - mountPath: /etc/krb5.conf 
-            name: krb5-conf
-            subPath: krb5.conf
-          - mountPath: /var/kerberos/krb5kdc
-            name: {{ .Values.kdc.persistence.name }}
-          - name: {{ .Values.ldap.persistence.name }} 
-            mountPath: /var/lib/ldap
-            subPath: data
-          - name: {{ .Values.ldap.persistence.name }} 
-            mountPath: /etc/ldap/slapd.d
-            subPath: config-data
+{{ include "kerberos.volumeMountsLdap" . | indent 10 }}
+{{ include "kerberos.volumeMountsKrb" . | indent 10 }}
       containers:
       - name: ldap
         resources:
@@ -203,12 +181,7 @@ spec:
           periodSeconds: 10
           failureThreshold: 10
         volumeMounts:
-        - name: {{ .Values.ldap.persistence.name }} 
-          mountPath: /var/lib/ldap
-          subPath: data
-        - name: {{ .Values.ldap.persistence.name }} 
-          mountPath: /etc/ldap/slapd.d
-          subPath: config-data
+{{ include "kerberos.volumeMountsLdap" . | indent 8 }}
       - name: kdc
         resources:
           {{- toYaml .Values.resources | nindent 12 }}
@@ -232,26 +205,8 @@ spec:
           name: {{ .Values.kdc.tcp.name }}
           protocol: TCP
         volumeMounts:
-        - mountPath: /var/kerberos/krb5kdc/kadm5.acl
-          name: kdc-conf
-          subPath: kadm5.acl
-        - mountPath: /etc/krb5/kdc.conf
-          name: kdc-conf
-          subPath: kdc.conf
-        - mountPath: /etc/krb5kdc/kdc.conf
-          name: kdc-conf
-          subPath: kdc.conf
-        - mountPath: /etc/krb5.conf 
-          name: krb5-conf
-          subPath: krb5.conf
-        - mountPath: /var/kerberos/krb5kdc
-          name: {{ .Values.kdc.persistence.name }}
-        - name: {{ .Values.ldap.persistence.name }} 
-          mountPath: /var/lib/ldap
-          subPath: data
-        - name: {{ .Values.ldap.persistence.name }} 
-          mountPath: /etc/ldap/slapd.d
-          subPath: config-data
+{{ include "kerberos.volumeMountsLdap" . | indent 8 }}
+{{ include "kerberos.volumeMountsKrb" . | indent 8 }}
       - name: kadmin
         resources:
           {{- toYaml .Values.resources | nindent 12 }}
@@ -260,14 +215,6 @@ spec:
         command: ["/bin/sh", "-c"]
         args:
         - /usr/sbin/kadmind -nofork
-        # command: 
-        #   - /bin/sh
-        #   - -c
-        #   - |-
-        #     while true;
-        #     do
-        #       sleep 20
-        #     done
         ports:
         - containerPort: 749
           name: kadmin-tcp
@@ -276,49 +223,7 @@ spec:
           name: kadmin-udp
           protocol: UDP
         volumeMounts:
-        # Kerberos typically expects the database to be stored in the same
-        # directory as the kdc config files; the db volume is mounted first
-        - name: {{ .Values.kdc.persistence.name }}
-          mountPath: /var/kerberos/krb5kdc
-        - name: kdc-conf # Volume comes from the shared configmap; subpath splits off the individual file
-          mountPath: /var/kerberos/krb5kdc/kadm5.acl
-          subPath: kadm5.acl
-        - mountPath: /etc/krb5/kdc.conf
-          name: kdc-conf
-          subPath: kdc.conf
-        - mountPath: /etc/krb5kdc/kdc.conf
-          name: kdc-conf
-          subPath: kdc.conf
-        - name: krb5-conf
-          mountPath: /etc/krb5.conf 
-          subPath: krb5.conf
-        - name: {{ .Values.ldap.persistence.name }} 
-          mountPath: /var/lib/ldap
-          subPath: data
-        - name: {{ .Values.ldap.persistence.name }} 
-          mountPath: /etc/ldap/slapd.d
-          subPath: config-data
+{{ include "kerberos.volumeMountsLdap" . | indent 8 }}
+{{ include "kerberos.volumeMountsKrb" . | indent 8 }}
       volumes:
-      - name: kdc-conf
-        configMap:
-          name: {{ template "kerberos.fullname" . }}-kdc-config
-      - name: krb5-conf
-        configMap:
-          name: {{ template "kerberos.fullname" . }}-krb5-config
-      - name: users-conf
-        configMap:
-          name: {{ template "kerberos.fullname" . }}-users-config
-      - name: {{ .Values.kdc.persistence.name }}
-{{- if .Values.kdc.persistence.enabled }}
-        persistentVolumeClaim:
-          claimName: {{ .Values.kdc.persistence.name }}
-{{- else if not .Values.kdc.persistence.enabled }}
-        emptyDir: {}
-{{- end }}
-      - name: {{ .Values.ldap.persistence.name }}
-{{- if .Values.ldap.persistence.enabled }}
-        persistentVolumeClaim:
-          claimName: {{ .Values.ldap.persistence.existingClaim }}
-{{- else }}
-        emptyDir: {}
-{{- end -}}
+{{ include "kerberos.volumes" . | indent 6 }}

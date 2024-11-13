@@ -38,4 +38,18 @@ public class UnprotectedResources {
     LOGGER.log(Level.INFO, "Response: {0}", json);
     return Response.ok(json).build();
   }
+  
+  @GET
+  @Path("/401")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getUnauthorized() {
+    return Response.status(Response.Status.UNAUTHORIZED).build();
+  }
+  
+  @GET
+  @Path("/403")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getForbidden() {
+    return Response.status(Response.Status.FORBIDDEN).build();
+  }
 }

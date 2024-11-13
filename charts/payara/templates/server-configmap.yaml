@@ -22,8 +22,8 @@ data:
 
     echo "AS_ADMIN_PASSWORD=$ADMIN_PASSWORD" > "$PASSWORD_FILE"
     
-    cp /etc/krb5.conf /opt/payara/appserver/glassfish/domains/domain1/config/
-    cp /etc/security/keytabs/service.keytab /opt/payara/appserver/glassfish/domains/domain1/config/
+    #     cp /etc/krb5.conf /opt/payara/appserver/glassfish/domains/domain1/config/
+    #     cp /etc/security/keytabs/service.keytab /opt/payara/appserver/glassfish/domains/domain1/config/
 
     "${PAYARA_DIR}"/bin/asadmin --user="${ADMIN_USER}" --passwordfile="${PASSWORD_FILE}" enable-secure-admin
     "${PAYARA_DIR}"/bin/asadmin --user="${ADMIN_USER}" --passwordfile="${PASSWORD_FILE}" stop-domain "$DOMAIN_NAME"
@@ -46,31 +46,36 @@ data:
     };
 
     ldapRealm {
-            com.sun.enterprise.security.auth.login.LDAPLoginModule required;
+        com.sun.enterprise.security.auth.login.LDAPLoginModule required;
     };
 
     solarisRealm {
-            com.sun.enterprise.security.auth.login.SolarisLoginModule required;
+        com.sun.enterprise.security.auth.login.SolarisLoginModule required;
     };
 
     jdbcRealm {
-            com.sun.enterprise.security.ee.auth.login.JDBCLoginModule required;
+        com.sun.enterprise.security.ee.auth.login.JDBCLoginModule required;
     };
     jdbcDigestRealm {
         com.sun.enterprise.security.ee.auth.login.JDBCDigestLoginModule required;
     };
     pamRealm {
-            com.sun.enterprise.security.ee.auth.login.PamLoginModule required;
+        com.sun.enterprise.security.ee.auth.login.PamLoginModule required;
     };
 
     spnego-client {
-            com.sun.security.auth.module.Krb5LoginModule required;
+        com.sun.security.auth.module.Krb5LoginModule required;
     };
 
     spnego-server {
-            com.sun.security.auth.module.Krb5LoginModule required
-            useKeyTab=true
-            storeKey=true
-            isInitiator=false
-            keyTab=service.keytab;
+        com.sun.security.auth.module.Krb5LoginModule required
+        debug=true
+        useKeyTab=true
+        storeKey=true
+        isInitiator=false
+        doNotPrompt=true
+        principal="HTTP/{{ include "payara-node.fullname" . }}.kerberos.svc.cluster.local@{{ .Values.global.realm | upper }}"
+        keyTab="/etc/security/keytabs/service.keytab";
     };
+#   domain.xml: |-
+# {{ tpl (.Files.Get "resources/domain.xml") . | indent 8 }}

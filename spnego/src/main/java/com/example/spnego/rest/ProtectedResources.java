@@ -33,7 +33,7 @@ public class ProtectedResources {
   @Path("/resource")
   @Produces(MediaType.APPLICATION_JSON)
   public Response getProtectedResource(@Context SecurityContext sc, @Context HttpServletRequest req) throws
-    NamingException, LoginException {
+      NamingException, LoginException {
     JsonResponse json = new JsonResponse();
     json.setStatus("SUCCESS");
     json.setMessage("Protected Resource!");

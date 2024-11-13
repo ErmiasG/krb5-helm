@@ -6,20 +6,26 @@
          version="5.0"
          metadata-complete="false">
   <filter>
+    <!-- https://spnego.sourceforge.net/reference_docs.html -->
     <description>SPNEGO filter</description>
     <filter-name>SpnegoHttpFilter</filter-name>
     <filter-class>net.sourceforge.spnego.SpnegoHttpFilter</filter-class>
     <init-param>
       <param-name>spnego.allow.basic</param-name>
-      <param-value>true</param-value>
+      <param-value>false</param-value>
     </init-param>
     <init-param>
+      <!-- Skip authentication if requests are coming from localhost. -->
       <param-name>spnego.allow.localhost</param-name>
-      <param-value>true</param-value>
+      <param-value>false</param-value>
+    </init-param>
+    <init-param>
+      <param-name>spnego.authz.403</param-name>
+      <param-value>/403.html</param-value>
     </init-param>
     <init-param>
       <param-name>spnego.allow.unsecure.basic</param-name>
-      <param-value>true</param-value>
+      <param-value>false</param-value>
     </init-param>
     <init-param>
       <param-name>spnego.login.client.module</param-name>
@@ -39,7 +45,7 @@
     </init-param>
     <init-param>
       <param-name>spnego.prompt.ntlm</param-name>
-      <param-value>true</param-value>
+      <param-value>false</param-value>
     </init-param>
     <init-param>
       <param-name>spnego.logger.level</param-name>
@@ -50,6 +56,14 @@
     <filter-name>SpnegoHttpFilter</filter-name>
     <url-pattern>/api/protected/*</url-pattern>
   </filter-mapping>
+  <error-page>
+    <error-code>401</error-code>
+    <location>/401.html</location>
+  </error-page>
+  <error-page>
+    <error-code>403</error-code>
+    <location>/403.html</location>
+  </error-page>
   <session-config>
     <session-timeout>
       30

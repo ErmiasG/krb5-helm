@@ -24,6 +24,7 @@ data:
        default_realm = {{ .Values.krb5.default_realm | upper }}     
     [realms]
      {{ .Values.krb5.default_realm | upper }} = {
+          database_module = openldap_ldapconf
           database_name = /var/kerberos/krb5kdc/principal
           admin_keytab = FILE:/var/kerberos/krb5kdc/kadm5.keytab
           acl_file = /var/kerberos/krb5kdc/kadm5.acl
@@ -39,6 +40,22 @@ data:
           #supported_enctypes = aes256-cts:normal arcfour-hmac:normal des3-hmac-sha1:normal des-cbc-crc:normal des:normal des:v4 des:norealm des:onlyrealm des:afs3
           default_principal_flags = +preauth
      }
+    [dbmodules]
+      openldap_ldapconf = {
+         db_library = kldap
+         ldap_kdc_dn = "cn=admin,{{ .Values.ldap.basedn }}"
+
+         # this object needs to have read rights on
+         # the realm container, principal container and realm sub-trees
+         ldap_kadmind_dn = "cn=admin,{{ .Values.ldap.basedn }}"
+
+         # this object needs to have read and write rights on
+         # the realm container, principal container and realm sub-trees
+         #ldap_service_password_file = /etc/krb5kdc/service.keyfile
+         ldap_service_password_file = /var/kerberos/krb5kdc/service.keyfile
+         ldap_servers = ldap:///
+         ldap_conns_per_server = 5
+      }
   kadm5.acl: |-
      # Allow full permissions to all admin principals in the EXAMPLE.AI realm
      */admin@{{ .Values.krb5.default_realm | upper }}    *
