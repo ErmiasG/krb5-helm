@@ -1,0 +1,118 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "payara.fullname" . }}-server
+  labels:
+    {{- include "payara.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.server.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "payara.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "payara.labels" . | nindent 8 }}
+	{{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "payara.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: server-sidecar
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.node.image.repository }}:{{ .Values.node.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.server.image.pullPolicy }}
+          command:
+            - /opt/payara/scripts/deploy.sh
+          env:
+            - name: PAYARA_DEPLOYMENT_GROUP
+              value: payara-dg
+            - name: PAYARA_CONFIG_NAME
+              value: payara-config
+            - name: WORKER_DEPLOYMENT_NAME
+              value: {{ include "payara-node.fullname" . }}
+            - name: VERSION
+              value: "0.1"
+            - name: INITIAL_DELAY_SEC
+              value: "30"
+            - name: ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "payara.fullname" . }}-server
+                  key: admin-password
+            - name: PAYARA_DAS_HOST
+              value: {{ include "payara.fullname" . }}-server
+        - name: server
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.server.image.repository }}:{{ .Values.server.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.server.image.pullPolicy }}
+          ports:
+            - name: server-http
+              containerPort: {{ .Values.server.service.port }}
+              protocol: TCP
+          livenessProbe:
+            exec:
+              command:
+                - /bin/bash
+                - /opt/payara/k8s/ready.sh
+            initialDelaySeconds: 90
+            periodSeconds: 10
+            timeoutSeconds: 30
+          readinessProbe:
+            exec:
+              command:
+                - /bin/bash
+                - /opt/payara/k8s/ready.sh
+            initialDelaySeconds: 90
+            periodSeconds: 10
+            timeoutSeconds: 30
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          env:
+            - name: DEPLOY_PROPS
+              value: '--keepState=false --precompilejsp=false --availabilityEnabled=false --asyncreplication=false --name=spnego-0.1 --verify=false --force=true --contextroot=/spnego --enabled=true --properties=implicitCdiEnabled=true:preserveAppScopedResources=false:cdiDevModeEnabled=false --target=payara-dg'
+            - name: ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "payara.fullname" . }}-server
+                  key: admin-password
+            - name: AS_ADMIN_MASTERPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "payara.fullname" . }}-server
+                  key: admin-password
+            - name: POSTBOOT_COMMANDS
+              value: /opt/payara/k8s/commands/post-boot-commands.asadmin
+          {{- with .Values.server.volumeMounts }}
+          volumeMounts:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      {{- with .Values.server.volumes }}
+      volumes:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

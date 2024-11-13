@@ -1,0 +1,1449 @@
+---
+# Source: kerberos/charts/kerberos/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kerberos-release
+  labels:
+    helm.sh/chart: kerberos-0.1.0
+    app.kubernetes.io/name: kerberos
+    app.kubernetes.io/instance: kerberos-release
+    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/managed-by: Helm
+automountServiceAccountToken: true
+---
+# Source: kerberos/charts/payara/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kerberos-release-payara
+  labels:
+    helm.sh/chart: payara-0.1.0
+    app.kubernetes.io/name: payara
+    app.kubernetes.io/instance: kerberos-release
+    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/managed-by: Helm
+automountServiceAccountToken: true
+---
+# Source: kerberos/charts/kerberos/templates/krb-secret.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  labels:
+    app: kerberos
+    chart: kerberos-0.1.0
+    heritage: Helm
+    release: kerberos-release
+  name: kerberos-release
+type: Opaque
+data:
+  master-password: "YWRtaW5wdw=="
+---
+# Source: kerberos/charts/payara/templates/server-secret.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: kerberos-release-payara-server
+  labels:
+    helm.sh/chart: payara-0.1.0
+    app.kubernetes.io/name: payara
+    app.kubernetes.io/instance: kerberos-release
+    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/managed-by: Helm
+type: Opaque
+data:
+  admin-password: "YWRtaW5wdw=="
+---
+# Source: kerberos/charts/kerberos/templates/kdc-conf.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kerberos-release-kdc-config
+  labels:
+    app: kerberos
+    chart: kerberos-0.1.0
+    heritage: Helm
+    release: kerberos-release
+    component: kdc
+data:
+  kdc.conf: |-
+    [libdefaults]
+       debug = true
+    [logging]
+       #kdc = FILE:/var/log/kerberos/krb5kdc.log
+       kdc = CONSOLE
+       admin_server = CONSOLE
+    [kdcdefaults]
+       kdc_ports = 88
+       kdc_tcp_ports = 88
+       restrict_anonymous_to_tgt = true
+       spake_preauth_kdc_challenge = edwards25519
+       default_realm = EXAMPLE.AI     
+    [realms]
+     EXAMPLE.AI = {
+          database_name = /var/kerberos/krb5kdc/principal
+          admin_keytab = FILE:/var/kerberos/krb5kdc/kadm5.keytab
+          acl_file = /var/kerberos/krb5kdc/kadm5.acl
+          key_stash_file = /var/kerberos/krb5kdc/stash
+
+          kdc_ports = 749,88
+          max_life = 10h 0m 0s
+          max_renewable_life = 7d 0h 0m 0s
+          master_key_type = aes128-cts
+          #master_key_type = des3-hmac-sha1
+          supported_enctypes = aes128-cts rc4-hmac des3-cbc-sha1 des-cbc-md5 des-cbc-crc
+          #supported_enctypes = aes128-cts aes256-cts arcfour-hmac-md5 des3-hmac-sha1:normal des-cbc-crc:normal des:normal des:v4 des:norealm des:onlyrealm
+          #supported_enctypes = aes256-cts:normal arcfour-hmac:normal des3-hmac-sha1:normal des-cbc-crc:normal des:normal des:v4 des:norealm des:onlyrealm des:afs3
+          default_principal_flags = +preauth
+     }
+  kadm5.acl: |-
+     # Allow full permissions to all admin principals in the EXAMPLE.AI realm
+     */admin@EXAMPLE.AI    *
+
+     # Allow read-only permissions to any other user in the EXAMPLE.AI realm (if needed)
+     # This grants basic read access but no modification permissions.
+     *     i
+  acl.ldif: |-
+     dn: olcDatabase={1}mdb,cn=config
+     replace: olcAccess
+     olcAccess: to attrs=userPassword,shadowLastChange,krbPrincipalKey by dn="cn=admin,dc=example,dc=ai" write by anonymous auth by self write by * none
+     -
+     add: olcAccess
+     olcAccess: to dn.base="" by * read
+     -
+     add: olcAccess
+     olcAccess: to * by dn="cn=admin,dc=example,dc=ai" write by * read
+---
+# Source: kerberos/charts/kerberos/templates/krb5-conf.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kerberos-release-krb5-config
+  labels:
+    app: kerberos
+    chart: kerberos-0.1.0
+    heritage: Helm
+    release: kerberos-release
+    component: krb5
+data:
+  krb5.conf: |-
+    [libdefaults]
+        default_realm = EXAMPLE.AI
+        dns_lookup_realm = false
+        dns_lookup_kdc = true
+        rdns = false
+        ticket_lifetime = 24h
+        forwardable = true
+        udp_preference_limit = 0
+        default_ccache_name = /tmp/ccache/krb5kdc_ccache
+        permitted_enctypes = aes256-cts-hmac-sha1-96 aes256-cts-hmac-sha384-192 camellia256-cts-cmac aes128-cts-hmac-sha1-96 aes128-cts-hmac-sha256-128 camellia128-cts-cmac
+
+    [dbdefaults]
+        ldap_kerberos_container_dn = cn=krbContainer,dc=example,dc=ai
+    [dbmodules]
+        openldap_ldapconf = {
+            db_library = kldap
+            ldap_kdc_dn = "cn=admin,dc=example,dc=ai"
+
+            # this object needs to have read rights on
+            # the realm container, principal container and realm sub-trees
+            ldap_kadmind_dn = "cn=admin,dc=example,dc=ai"
+
+            # this object needs to have read and write rights on
+            # the realm container, principal container and realm sub-trees
+            #ldap_service_password_file = /etc/krb5kdc/service.keyfile
+            ldap_service_password_file = /var/kerberos/krb5kdc/service.keyfile
+            ldap_servers = ldap:///
+            ldap_conns_per_server = 5
+        }
+    [realms]
+        EXAMPLE.AI = {
+            kdc = kerberos-release-kdc.kerberos.svc.cluster.local:88
+            master_kdc = kerberos-release-kdc.kerberos.svc.cluster.local:88
+            admin_server = kerberos-release-kadmin.kerberos.svc.cluster.local:749
+            default_domain = cluster.local
+        }
+    [domain_realm]
+        .cluster.local = EXAMPLE.AI
+        cluster.local = EXAMPLE.AI
+    [logging]
+        #default = FILE:/var/log/kerberos/krb5libs.log
+        #kdc = FILE:/var/log/kerberos/krb5kdc.log
+        #admin_server = FILE:/var/log/kerberos/kadmind.log
+        default = CONSOLE
+        kdc = CONSOLE
+        admin_server = CONSOLE
+---
+# Source: kerberos/charts/kerberos/templates/server-krb5-conf.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: server-krb5-config
+  labels:
+    app: kerberos
+    chart: kerberos-0.1.0
+    heritage: Helm
+    release: kerberos-release
+    component: krb5
+data:
+  krb5.conf: |-
+    [libdefaults]
+        default_realm = EXAMPLE.AI
+    [realms]
+        EXAMPLE.AI = {
+            kdc = kerberos-release-kdc.kerberos.svc.cluster.local:88
+            master_kdc = kerberos-release-kdc.kerberos.svc.cluster.local:88
+            admin_server = kerberos-release-kadmin.kerberos.svc.cluster.local:749
+            default_domain = cluster.local
+        }
+---
+# Source: kerberos/charts/kerberos/templates/users-conf.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kerberos-release-users-config
+  labels:
+    app: kerberos
+    chart: kerberos-0.1.0
+    heritage: Helm
+    release: kerberos-release
+    component: kdc
+data:
+  users.ldif: |-
+        dn: ou=People,dc=example,dc=ai
+        objectClass: organizationalUnit
+        ou: People
+        
+        dn: ou=Groups,dc=example,dc=ai
+        objectClass: organizationalUnit
+        ou: Groups
+        
+        dn: cn=miners,ou=Groups,dc=example,dc=ai
+        objectClass: posixGroup
+        cn: miners
+        gidNumber: 5000
+        
+        dn: uid=john,ou=People,dc=example,dc=ai
+        objectClass: inetOrgPerson
+        objectClass: posixAccount
+        objectClass: shadowAccount
+        uid: john
+        sn: Doe
+        givenName: John
+        cn: John Doe
+        displayName: John Doe
+        uidNumber: 1000
+        gidNumber: 5000
+        userPassword: johnldap
+        gecos: John Doe
+        mail: john@gmail.com
+        mail: johnd@hotmail.com
+        mail: john.d@yahoo.com
+        ou: IT
+        loginShell: /bin/bash
+        homeDirectory: /home/john
+        
+        dn: uid=george,ou=People,dc=example,dc=ai
+        objectClass: inetOrgPerson
+        objectClass: posixAccount
+        objectClass: shadowAccount
+        uid: george
+        sn: Doe
+        givenName: George
+        cn: George Doe
+        displayName: George Doe
+        uidNumber: 1001
+        gidNumber: 5000
+        userPassword: georgeldap
+        gecos: george
+        mail: george@gmail.com
+        mail: georged@hotmail.com
+        mail: george.d@yahoo.com
+        ou: Human Resources
+        loginShell: /bin/bash
+        homeDirectory: /home/george
+        
+        dn: uid=tkelly,ou=People,dc=example,dc=ai
+        objectClass: person
+        objectClass: shadowAccount
+        objectClass: inetOrgPerson
+        objectClass: organizationalPerson
+        objectClass: posixAccount
+        objectClass: top
+        uid: tkelly
+        #classOfService: gold
+        userpassword: tkellyldap
+        facsimiletelephonenumber: +1 408 555 1992
+        givenname: Timothy
+        cn: Timothy Kelly
+        telephonenumber: +1 408 555 4295
+        sn: Kelly
+        roomnumber: 3107
+        homeDirectory: /home/tkelly
+        mail: tkelly@gmail.com
+        mail: timothy.kelly@hotmail.com
+        mail: timothykelly@yahoo.com
+        l: Santa Clara
+        ou: Product Development
+        uidNumber: 1065
+        gidNumber: 5000
+        
+        dn: uid=tlabonte,ou=People,dc=example,dc=ai
+        objectClass: person
+        objectClass: shadowAccount
+        objectClass: inetOrgPerson
+        objectClass: organizationalPerson
+        objectClass: posixAccount
+        objectClass: top
+        uid: tlabonte
+        #classOfService: gold
+        userpassword: tlabonteldap
+        facsimiletelephonenumber: +1 408 555 9751
+        givenname: Tim
+        cn: Tim Labonte
+        telephonenumber: +1 408 555 0058
+        sn: Labonte
+        roomnumber: 1426
+        homeDirectory: /home/tlabonte
+        mail: tlabonte@gmail.com
+        mail: tlabontel@hotmail.com
+        l: Cupertino
+        ou: IT
+        ou: People
+        uidNumber: 1054
+        gidNumber: 5000
+        
+        dn: uid=tmason,ou=People,dc=example,dc=ai
+        objectClass: person
+        objectClass: shadowAccount
+        objectClass: inetOrgPerson
+        objectClass: organizationalPerson
+        objectClass: posixAccount
+        objectClass: top
+        uid: tmason
+        #classOfService: silver
+        userpassword: tmasonldap
+        facsimiletelephonenumber: +1 408 555 9751
+        givenname: Torrey
+        cn: Torrey Mason
+        telephonenumber: +1 408 555 1596
+        sn: Mason
+        roomnumber: 1124
+        homeDirectory: /home/tmason
+        mail: tmason@gmail.com
+        l: Sunnyvale
+        ou: Human Resources
+        ou: People
+        uidNumber: 1016
+        gidNumber: 5000
+        
+        dn: uid=tmorris,ou=People,dc=example,dc=ai
+        objectClass: person
+        objectClass: shadowAccount
+        objectClass: inetOrgPerson
+        objectClass: organizationalPerson
+        objectClass: posixAccount
+        objectClass: top
+        uid: tmorris
+        #classOfService: gold
+        userpassword: tmorrisldap
+        facsimiletelephonenumber: +1 408 555 8473
+        givenname: Ted
+        cn: Ted Morris
+        telephonenumber: +1 408 555 9187
+        sn: Morris
+        roomnumber: 4117
+        homeDirectory: /home/tmorris
+        mail: tmorris@gmail.com
+        l: Santa Clara
+        ou: Accounting
+        ou: People
+        uidNumber: 1003
+        gidNumber: 5000
+        
+        dn: uid=tpierce,ou=People,dc=example,dc=ai
+        objectClass: person
+        objectClass: shadowAccount
+        objectClass: inetOrgPerson
+        objectClass: organizationalPerson
+        objectClass: posixAccount
+        objectClass: top
+        uid: tpierce
+        #classOfService: gold
+        userpassword: tpierceldap
+        facsimiletelephonenumber: +1 408 555 9332
+        givenname: Tobias
+        cn: Tobias Pierce
+        telephonenumber: +1 408 555 1531
+        sn: Pierce
+        roomnumber: 1383
+        homeDirectory: /home/tpierce
+        mail: tpierce@gmail.com
+        l: Sunnyvale
+        ou: IT
+        ou: People
+        uidNumber: 1042
+        gidNumber: 5000
+        
+        dn: uid=trigden,ou=People,dc=example,dc=ai
+        objectClass: person
+        objectClass: shadowAccount
+        objectClass: inetOrgPerson
+        objectClass: organizationalPerson
+        objectClass: posixAccount
+        objectClass: top
+        uid: trigden
+        #classOfService: gold
+        userpassword: trigdenldap
+        facsimiletelephonenumber: +1 408 555 8473
+        givenname: Torrey
+        cn: Torrey Rigden
+        telephonenumber: +1 408 555 9280
+        sn: Rigden
+        roomnumber: 3584
+        homeDirectory: /home/trigden
+        mail: trigden@gmail.com
+        l: Santa Clara
+        ou: Product Development
+        ou: People
+        uidNumber: 1009
+        gidNumber: 5000
+        
+        dn: uid=tschmith,ou=People,dc=example,dc=ai
+        objectClass: person
+        objectClass: shadowAccount
+        objectClass: inetOrgPerson
+        objectClass: organizationalPerson
+        objectClass: posixAccount
+        objectClass: top
+        uid: tschmith
+        #classOfService: gold
+        userpassword: tschmithldap
+        facsimiletelephonenumber: +1 408 555 1992
+        givenname: Tobias
+        cn: Tobias Schmith
+        telephonenumber: +1 408 555 9626
+        sn: Schmith
+        roomnumber: 4607
+        homeDirectory: /home/tschmith
+        mail: tschmith@gmail.com
+        l: Cupertino
+        ou: IT
+        ou: People
+        uidNumber: 1100
+        gidNumber: 5000
+        
+        dn: uid=tschneid,ou=People,dc=example,dc=ai
+        objectClass: person
+        objectClass: shadowAccount
+        objectClass: inetOrgPerson
+        objectClass: organizationalPerson
+        objectClass: posixAccount
+        objectClass: top
+        uid: tschneid
+        #classOfService: silver
+        userpassword: tschneidldap
+        facsimiletelephonenumber: +1 408 555 8473
+        givenname: Torrey
+        cn: Torrey Schneider
+        telephonenumber: +1 408 555 7086
+        sn: Schneider
+        roomnumber: 2292
+        homeDirectory: /home/tschneid
+        mail: tschneid@gmail.com
+        l: Sunnyvale
+        ou: IT
+        ou: People
+        uidNumber: 1057
+        gidNumber: 5000
+        
+        dn: uid=ttully,ou=People,dc=example,dc=ai
+        objectClass: person
+        objectClass: shadowAccount
+        objectClass: inetOrgPerson
+        objectClass: organizationalPerson
+        objectClass: posixAccount
+        objectClass: top
+        uid: ttully
+        #classOfService: silver
+        userpassword: ttullyldap
+        facsimiletelephonenumber: +1 408 555 0111
+        givenname: Torrey
+        cn: Torrey Tully
+        telephonenumber: +1 408 555 2274
+        sn: Tully
+        roomnumber: 3924
+        homeDirectory: /home/ttully
+        mail: ttully@gmail.com
+        l: Sunnyvale
+        ou: Human Resources
+        ou: People
+        uidNumber: 1130
+        gidNumber: 5000
+        
+        dn: uid=tward,ou=People,dc=example,dc=ai
+        objectClass: person
+        objectClass: shadowAccount
+        objectClass: inetOrgPerson
+        objectClass: organizationalPerson
+        objectClass: posixAccount
+        objectClass: top
+        uid: tward
+        #classOfService: silver
+        userpassword: twardldap
+        facsimiletelephonenumber: +1 408 555 4661
+        givenname: Tobias
+        cn: Tobias Ward
+        telephonenumber: +1 408 555 7202
+        sn: Ward
+        roomnumber: 2238
+        homeDirectory: /home/tward
+        mail: tward@gmail.com
+        l: Santa Clara
+        ou: IT
+        ou: People
+        uidNumber: 1091
+        gidNumber: 5000
+        
+        dn: uid=wlutz,ou=People,dc=example,dc=ai
+        objectClass: person
+        objectClass: shadowAccount
+        objectClass: inetOrgPerson
+        objectClass: organizationalPerson
+        objectClass: posixAccount
+        objectClass: top
+        uid: wlutz
+        #classOfService: silver
+        userpassword: wlutzldap
+        facsimiletelephonenumber: +1 408 555 9332
+        givenname: Wendy
+        cn: Wendy Lutz
+        telephonenumber: +1 408 555 3358
+        sn: Lutz
+        roomnumber: 4912
+        homeDirectory: /home/wlutz
+        mail: wlutz@gmail.com
+        mail: wlutzl@hotmail.com
+        l: Santa Clara
+        ou: Human Resources
+        ou: People
+        uidNumber: 1109
+        gidNumber: 5000
+        
+        dn: cn=HR Managers,ou=groups,dc=example,dc=ai
+        objectClass: groupofnames
+        objectClass: top
+        ou: groups
+        description: People who can manage HR entries
+        member: uid=george,ou=People,dc=example,dc=ai
+        member: uid=wlutz,ou=People,dc=example,dc=ai
+        member: uid=ttully,ou=People,dc=example,dc=ai
+        cn: HR Managers
+        
+        dn: cn=ITpeople,ou=groups,dc=example,dc=ai
+        objectclass: groupOfURLs
+        cn: ITpeople
+        memberURL: ldap:///ou=People,dc=example,dc=ai??sub?(ou=IT)
+---
+# Source: kerberos/charts/payara/templates/server-configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: server-configmap
+data:
+  init_2_change_password.sh: |-
+    #!/bin/bash
+
+    echo "AS_ADMIN_MASTERPASSWORD=changeit
+    AS_ADMIN_NEWMASTERPASSWORD=$ADMIN_PASSWORD" > /tmp/masterpwdfile
+
+    echo "AS_ADMIN_PASSWORD=admin
+    AS_ADMIN_NEWPASSWORD=$ADMIN_PASSWORD" > /tmp/adminpwdfile
+
+    "${PAYARA_DIR}"/bin/asadmin --passwordfile=/tmp/masterpwdfile change-master-password --savemasterpassword
+    echo "AS_ADMIN_MASTERPASSWORD=$ADMIN_PASSWORD" >> "${PASSWORD_FILE}"
+
+    "${PAYARA_DIR}"/bin/asadmin --user="${ADMIN_USER}" --passwordfile="${PASSWORD_FILE}" start-domain "${DOMAIN_NAME}"
+    # This (--hostawarepartitioning true) need to be set here because it needs a restart and can not be set in post boot commands.
+    "${PAYARA_DIR}"/bin/asadmin --user="${ADMIN_USER}" --passwordfile="${PASSWORD_FILE}" set-hazelcast-configuration --hostawarepartitioning true --clustermode kubernetes --kubernetesServiceName server --kubernetesNamespace kerberos
+    "${PAYARA_DIR}"/bin/asadmin --user="${ADMIN_USER}" --passwordfile=/tmp/adminpwdfile --interactive=false change-admin-password
+
+    echo "AS_ADMIN_PASSWORD=$ADMIN_PASSWORD" > "$PASSWORD_FILE"
+
+    "${PAYARA_DIR}"/bin/asadmin --user="${ADMIN_USER}" --passwordfile="${PASSWORD_FILE}" enable-secure-admin
+    "${PAYARA_DIR}"/bin/asadmin --user="${ADMIN_USER}" --passwordfile="${PASSWORD_FILE}" stop-domain "$DOMAIN_NAME"
+
+    rm -rf /tmp/masterpwdfile
+    rm -rf /tmp/adminpwdfile
+  post-boot-commands.asadmin: |-
+    set resources.external-jndi-resource.ldap/LdapResource.enabled=true
+    set resources.external-jndi-resource.ldap/LdapResource.property.java\.naming\.provider\.url=ldap://kerberos-release-ldap.kerberos.svc.cluster.local:389
+    set resources.external-jndi-resource.ldap/LdapResource.property.java\.naming\.security\.authentication=simple
+    set resources.external-jndi-resource.ldap/LdapResource.property.java\.naming\.security\.principal=cn=admin,dc=example,dc=ai
+    set resources.external-jndi-resource.ldap/LdapResource.property.java\.naming\.security\.credentials=adminpw
+    set resources.external-jndi-resource.ldap/LdapResource.property.java\.naming\.referral=ignore
+    set resources.external-jndi-resource.ldap/LdapResource.factory-class=com.sun.jndi.ldap.LdapCtxFactory
+    set resources.external-jndi-resource.ldap/LdapResource.jndi-lookup-name=dc=example,dc=ai
+    set resources.external-jndi-resource.ldap/LdapResource.res-type=javax.naming.ldap.LdapContext
+  login.conf: |-
+    fileRealm {
+        com.sun.enterprise.security.auth.login.FileLoginModule required;
+    };
+
+    ldapRealm {
+            com.sun.enterprise.security.auth.login.LDAPLoginModule required;
+    };
+
+    solarisRealm {
+            com.sun.enterprise.security.auth.login.SolarisLoginModule required;
+    };
+
+    jdbcRealm {
+            com.sun.enterprise.security.ee.auth.login.JDBCLoginModule required;
+    };
+    jdbcDigestRealm {
+        com.sun.enterprise.security.ee.auth.login.JDBCDigestLoginModule required;
+    };
+    pamRealm {
+            com.sun.enterprise.security.ee.auth.login.PamLoginModule required;
+    };
+
+    spnego-client {
+            com.sun.security.auth.module.Krb5LoginModule required;
+    };
+
+    spnego-server {
+            com.sun.security.auth.module.Krb5LoginModule required
+            useKeyTab=true
+            storeKey=true
+            isInitiator=false
+            keyTab=service.keytab;
+    };
+---
+# Source: kerberos/charts/kerberos/templates/rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kerberos-release-cluster-role
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - endpoints
+      - pods
+      - nodes
+      - services
+      - configmaps
+    verbs:
+      - get
+      - list
+      - create
+      - delete
+---
+# Source: kerberos/charts/payara/templates/rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: hazelcast-cluster-role
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - endpoints
+      - pods
+      - nodes
+      - services
+      - configmaps
+    verbs:
+      - get
+      - list
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["*"] # needed to restart hopsworks instances on DAS pod restart
+---
+# Source: kerberos/charts/kerberos/templates/rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kerberos-release-cluster-role-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kerberos-release-cluster-role
+subjects:
+  - kind: ServiceAccount
+    name: kerberos-release
+    namespace: kerberos
+---
+# Source: kerberos/charts/payara/templates/rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: hazelcast-cluster-role-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: hazelcast-cluster-role
+subjects:
+  - kind: ServiceAccount
+    name: kerberos-release-payara
+    namespace: kerberos
+---
+# Source: kerberos/charts/kerberos/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name:  kerberos-release-kdc
+  labels:
+    helm.sh/chart: kerberos-0.1.0
+    app.kubernetes.io/name: kerberos
+    app.kubernetes.io/instance: kerberos-release
+    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  type: NodePort
+  ports:
+    - port: 88
+      targetPort: kdc-udp
+      protocol: UDP
+      name: kdc-udp
+    - port: 88
+      targetPort: kdc-tcp
+      protocol: TCP
+      name: kdc-tcp
+  selector:
+    app.kubernetes.io/name: kerberos
+    app.kubernetes.io/instance: kerberos-release
+---
+# Source: kerberos/charts/kerberos/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name:  kerberos-release-kadmin
+  labels:
+    helm.sh/chart: kerberos-0.1.0
+    app.kubernetes.io/name: kerberos
+    app.kubernetes.io/instance: kerberos-release
+    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  type: NodePort
+  ports:
+    - port: 749
+      targetPort: kadmin-udp
+      protocol: UDP
+      name: kadmin-udp
+    - port: 749
+      targetPort: kadmin-tcp
+      protocol: TCP
+      name: kadmin-tcp
+  selector:
+    app.kubernetes.io/name: kerberos
+    app.kubernetes.io/instance: kerberos-release
+---
+# Source: kerberos/charts/kerberos/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name:  kerberos-release-ldap
+  labels:
+    helm.sh/chart: kerberos-0.1.0
+    app.kubernetes.io/name: kerberos
+    app.kubernetes.io/instance: kerberos-release
+    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  type: ClusterIP
+  ports:
+    - port: 389
+      targetPort: ldap-tcp
+      protocol: TCP
+      name: ldap-tcp
+  selector:
+    app.kubernetes.io/name: kerberos
+    app.kubernetes.io/instance: kerberos-release
+---
+# Source: kerberos/charts/payara/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: kerberos-release-payara-server
+  labels:
+    helm.sh/chart: payara-0.1.0
+    app.kubernetes.io/name: payara
+    app.kubernetes.io/instance: kerberos-release
+    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  type: ClusterIP
+  ports:
+    - port: 4848
+      targetPort: server-http
+      protocol: TCP
+      name: server-http
+  selector:
+    app.kubernetes.io/name: payara
+    app.kubernetes.io/instance: kerberos-release
+---
+# Source: kerberos/charts/payara/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: server
+  labels:
+    helm.sh/chart: payara-0.1.0
+    app.kubernetes.io/name: payara-node
+    app.kubernetes.io/instance: kerberos-release
+    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  type: ClusterIP
+  ports:
+    - port: 28181
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: payara-node
+    app.kubernetes.io/instance: kerberos-release
+---
+# Source: kerberos/charts/kerberos/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kerberos-release
+  labels:
+    helm.sh/chart: kerberos-0.1.0
+    app.kubernetes.io/name: kerberos
+    app.kubernetes.io/instance: kerberos-release
+    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: kerberos
+      app.kubernetes.io/instance: kerberos-release
+  template:
+    metadata:
+      labels:
+        helm.sh/chart: kerberos-0.1.0
+        app.kubernetes.io/name: kerberos
+        app.kubernetes.io/instance: kerberos-release
+        app.kubernetes.io/version: "0.1.0"
+        app.kubernetes.io/managed-by: Helm
+    spec:
+      serviceAccountName: kerberos-release
+      securityContext:
+        {}
+      initContainers:
+        - name: reconfigure
+          image: "kerberos:0.1.0"
+          imagePullPolicy: IfNotPresent
+          command:
+            - /scripts/krb-reconfigure-slapd.sh
+          env:
+          - name: LDAP_DOMAIN
+            value: example.ai
+          - name: LDAP_OU
+            value: Example Inc.
+          - name: ADMIN_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: kerberos-release
+                key: master-password
+          volumeMounts:
+          - mountPath: /kerberos/acl.ldif
+            name: kdc-conf
+            subPath: acl.ldif
+          - name: ldap-data
+            mountPath: /var/lib/ldap
+            subPath: data
+          - name: ldap-data
+            mountPath: /etc/ldap/slapd.d
+            subPath: config-data
+        - name: add-users
+          image: "kerberos:0.1.0"
+          imagePullPolicy: IfNotPresent
+          # command: ["/bin/sh", "-c"]
+          # args:
+          #   - /scripts/start-slapd.sh &&
+          #     /scripts/add-users.sh /ldap/users.ldif
+          command:
+            - /bin/sh
+            - -c
+            - |-
+              /scripts/start-slapd.sh
+              /scripts/add-users.sh /ldap/users.ldif
+
+              kdb5_ldap_util -D cn=admin,dc=example,dc=ai -w $ADMIN_PASSWORD create -subtrees dc=example,dc=ai -r EXAMPLE.AI -s -H ldap:/// -P kdcdbkey
+
+              kdb5_ldap_util -D cn=admin,dc=example,dc=ai -w $ADMIN_PASSWORD stashsrvpw -f /var/kerberos/krb5kdc/service.keyfile cn=admin,dc=example,dc=ai <<EOF
+              $ADMIN_PASSWORD
+              $ADMIN_PASSWORD
+              EOF
+          env:
+          - name: ADMIN_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: kerberos-release
+                key: master-password
+          volumeMounts:
+          - mountPath: /ldap/users.ldif
+            name: users-conf
+            subPath: users.ldif
+          - mountPath: /etc/krb5/kdc.conf
+            name: kdc-conf
+            subPath: kdc.conf
+          - mountPath: /etc/krb5kdc/kdc.conf
+            name: kdc-conf
+            subPath: kdc.conf
+          - mountPath: /etc/krb5.conf 
+            name: krb5-conf
+            subPath: krb5.conf
+          - name: ldap-data 
+            mountPath: /var/lib/ldap
+            subPath: data
+          - name: ldap-data 
+            mountPath: /etc/ldap/slapd.d
+            subPath: config-data
+        - name: init-db
+          image: "kerberos:0.1.0"
+          imagePullPolicy: IfNotPresent
+          command:
+            - /init_db.sh
+          args:
+            - "$(REALM)"
+            - "$(MASTER_PASSWORD)"
+          env:
+          - name: REALM
+            value: EXAMPLE.AI
+          - name: MASTER_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: kerberos-release
+                key: master-password
+          volumeMounts:
+          - mountPath: /etc/krb5kdc/kdc.conf
+            name: kdc-conf
+            subPath: kdc.conf
+          - mountPath: /var/kerberos/krb5kdc
+            name: kerberos-db
+          - name: ldap-data 
+            mountPath: /var/lib/ldap
+            subPath: data
+          - name: ldap-data 
+            mountPath: /etc/ldap/slapd.d
+            subPath: config-data
+        - name: generate-keytab
+          image: "kerberos:0.1.0"
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+            - -c
+            - |-
+
+              kadmin.local -q "addprinc -randkey HTTP/server.kerberos.svc.cluster.local@EXAMPLE.AI"
+              kadmin.local -q "ktadd -k /tmp/http_srv.keytab  HTTP/server.kerberos.svc.cluster.local@EXAMPLE.AI"
+              kadmin.local -q 'addprinc -randkey admin/admin'
+              kadmin.local -q "ktadd -k /tmp/admin.keytab admin/admin"
+
+              # delete
+              kubectl --namespace kerberos delete configmap keytabs-configmap --|| true
+
+              # create it if it does not exist
+              kubectl --namespace kerberos create configmap keytabs-configmap --from-file=service.keytab=/tmp/http_srv.keytab --from-file=admin.keytab=/tmp/admin.keytab  --|| true
+          env:
+          - name: REALM
+            value: EXAMPLE.AI
+          - name: MASTER_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: kerberos-release
+                key: master-password
+          volumeMounts:
+          - mountPath: /etc/krb5/kdc.conf
+            name: kdc-conf
+            subPath: kdc.conf
+          - mountPath: /etc/krb5kdc/kdc.conf
+            name: kdc-conf
+            subPath: kdc.conf
+          - mountPath: /etc/krb5.conf 
+            name: krb5-conf
+            subPath: krb5.conf
+          - mountPath: /var/kerberos/krb5kdc
+            name: kerberos-db
+          - name: ldap-data 
+            mountPath: /var/lib/ldap
+            subPath: data
+          - name: ldap-data 
+            mountPath: /etc/ldap/slapd.d
+            subPath: config-data
+      containers:
+      - name: ldap
+        resources:
+            limits:
+              cpu: 2000m
+              memory: 1024Mi
+            requests:
+              cpu: 1000m
+              memory: 512Mi
+        image: "kerberos:0.1.0"
+        imagePullPolicy: IfNotPresent
+        command:
+          - slapd
+        args:
+          - -h
+          - "ldap:/// ldapi:///"
+          - -d
+          - "2"
+        ports:
+        - containerPort: 389
+          name: ldap-tcp
+          protocol: TCP
+        livenessProbe:
+          tcpSocket:
+            port: ldap-tcp
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          failureThreshold: 10
+        readinessProbe:
+          tcpSocket:
+            port: ldap-tcp
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          failureThreshold: 10
+        volumeMounts:
+        - name: ldap-data 
+          mountPath: /var/lib/ldap
+          subPath: data
+        - name: ldap-data 
+          mountPath: /etc/ldap/slapd.d
+          subPath: config-data
+      - name: kdc
+        resources:
+            limits:
+              cpu: 2000m
+              memory: 1024Mi
+            requests:
+              cpu: 1000m
+              memory: 512Mi
+        image: "kerberos:0.1.0"
+        imagePullPolicy: IfNotPresent
+        command:
+          - /usr/sbin/krb5kdc
+        args:
+          - -n
+          - "$(KRB5KDC_ARGS)"
+        env:
+        - name: KRB5REALM
+          value: EXAMPLE.AI
+        - name: KRB5KDC_ARGS
+          value: "-w 2"
+        ports:
+        - containerPort: 88
+          name: kdc-udp
+          protocol: UDP
+        - containerPort: 88
+          name: kdc-tcp
+          protocol: TCP
+        volumeMounts:
+        - mountPath: /var/kerberos/krb5kdc/kadm5.acl
+          name: kdc-conf
+          subPath: kadm5.acl
+        - mountPath: /etc/krb5/kdc.conf
+          name: kdc-conf
+          subPath: kdc.conf
+        - mountPath: /etc/krb5kdc/kdc.conf
+          name: kdc-conf
+          subPath: kdc.conf
+        - mountPath: /etc/krb5.conf 
+          name: krb5-conf
+          subPath: krb5.conf
+        - mountPath: /var/kerberos/krb5kdc
+          name: kerberos-db
+        - name: ldap-data 
+          mountPath: /var/lib/ldap
+          subPath: data
+        - name: ldap-data 
+          mountPath: /etc/ldap/slapd.d
+          subPath: config-data
+      - name: kadmin
+        resources:
+            limits:
+              cpu: 2000m
+              memory: 1024Mi
+            requests:
+              cpu: 1000m
+              memory: 512Mi
+        image: "kerberos:0.1.0"
+        imagePullPolicy: IfNotPresent
+        command: ["/bin/sh", "-c"]
+        args:
+        - /usr/sbin/kadmind -nofork
+        # command: 
+        #   - /bin/sh
+        #   - -c
+        #   - |-
+        #     while true;
+        #     do
+        #       sleep 20
+        #     done
+        ports:
+        - containerPort: 749
+          name: kadmin-tcp
+          protocol: TCP
+        - containerPort: 749
+          name: kadmin-udp
+          protocol: UDP
+        volumeMounts:
+        # Kerberos typically expects the database to be stored in the same
+        # directory as the kdc config files; the db volume is mounted first
+        - name: kerberos-db
+          mountPath: /var/kerberos/krb5kdc
+        - name: kdc-conf # Volume comes from the shared configmap; subpath splits off the individual file
+          mountPath: /var/kerberos/krb5kdc/kadm5.acl
+          subPath: kadm5.acl
+        - mountPath: /etc/krb5/kdc.conf
+          name: kdc-conf
+          subPath: kdc.conf
+        - mountPath: /etc/krb5kdc/kdc.conf
+          name: kdc-conf
+          subPath: kdc.conf
+        - name: krb5-conf
+          mountPath: /etc/krb5.conf 
+          subPath: krb5.conf
+        - name: ldap-data 
+          mountPath: /var/lib/ldap
+          subPath: data
+        - name: ldap-data 
+          mountPath: /etc/ldap/slapd.d
+          subPath: config-data
+      volumes:
+      - name: kdc-conf
+        configMap:
+          name: kerberos-release-kdc-config
+      - name: krb5-conf
+        configMap:
+          name: kerberos-release-krb5-config
+      - name: users-conf
+        configMap:
+          name: kerberos-release-users-config
+      - name: kerberos-db
+        emptyDir: {}
+      - name: ldap-data
+        emptyDir: {}
+---
+# Source: kerberos/charts/krb-client/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kerberos-release-krb-client
+  labels:
+    helm.sh/chart: krb-client-0.1.0
+    app.kubernetes.io/name: krb-client
+    app.kubernetes.io/instance: kerberos-release
+    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: krb-client
+      app.kubernetes.io/instance: kerberos-release
+  template:
+    metadata:
+      labels:
+        helm.sh/chart: krb-client-0.1.0
+        app.kubernetes.io/name: krb-client
+        app.kubernetes.io/instance: kerberos-release
+        app.kubernetes.io/version: "0.1.0"
+        app.kubernetes.io/managed-by: Helm
+    spec:
+      securityContext:
+        null
+      containers:
+        - name: krb-client-client
+          securityContext:
+            null
+          image: "krb-client:0.1.0"
+          imagePullPolicy: IfNotPresent
+          command:
+            - "/bin/bash"
+            - "-c"
+            - |
+              while true; do
+                sleep 10
+              done
+          resources:
+            limits:
+              cpu: 1000m
+              memory: 1024Mi
+            requests:
+              cpu: 200m
+              memory: 512Mi
+          volumeMounts:
+            - mountPath: /etc/krb5.conf
+              name: krb5-conf
+              subPath: krb5.conf
+      volumes:
+        - configMap:
+            name: server-krb5-config
+          name: krb5-conf
+---
+# Source: kerberos/charts/payara/templates/node-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: server
+  labels:
+    helm.sh/chart: payara-0.1.0
+    app.kubernetes.io/name: payara-node
+    app.kubernetes.io/instance: kerberos-release
+    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: payara-node
+      app.kubernetes.io/instance: kerberos-release
+  template:
+    metadata:
+      labels:
+        helm.sh/chart: payara-0.1.0
+        app.kubernetes.io/name: payara-node
+        app.kubernetes.io/instance: kerberos-release
+        app.kubernetes.io/version: "0.1.0"
+        app.kubernetes.io/managed-by: Helm
+    spec:
+      serviceAccountName: kerberos-release-payara
+      securityContext:
+        {}
+      initContainers:
+      - name: wait-for-server
+        image: "payara-node:0.1.0"
+        imagePullPolicy: IfNotPresent
+        command:
+            - /opt/payara/scripts/wait-for-admin.sh
+        env:
+          - name: PAYARA_DEPLOYMENT_GROUP
+            value: payara-dg
+          - name: PAYARA_CONFIG_NAME
+            value: payara-config
+          - name: ADMIN_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: kerberos-release-payara-server
+                key: admin-password
+          - name: PAYARA_DAS_HOST
+            value: kerberos-release-payara-server
+      containers:
+        - name: node
+          securityContext:
+            {}
+          image: "payara-node:0.1.0"
+          imagePullPolicy: IfNotPresent
+          command: [ "/bin/sh", "-c" ]
+          args:
+            - echo 'AS_ADMIN_MASTERPASSWORD='$AS_ADMIN_MASTERPASSWORD'\nAS_ADMIN_PASSWORD='$ADMIN_PASSWORD'' > $PAYARA_PASSWORD_FILE;
+              ${SCRIPT_DIR}/entrypoint.sh;
+          ports:
+            - name: http
+              containerPort: 28181
+          livenessProbe:
+            httpGet:
+              path: /spnego/api/health
+              port: http
+              scheme: HTTPS
+            periodSeconds: 3
+            failureThreshold: 210
+          readinessProbe:
+            httpGet:
+              path: /spnego/api/health
+              port: http
+              scheme: HTTPS
+            periodSeconds: 2
+            initialDelaySeconds: 30
+            failureThreshold: 210
+          startupProbe:
+            httpGet:
+              path: /spnego/api/health
+              port: http
+              scheme: HTTPS
+            periodSeconds: 5
+            initialDelaySeconds: 60
+            failureThreshold: 210
+          resources:
+            limits:
+              cpu: 2000m
+              memory: 2048Mi
+            requests:
+              cpu: 1000m
+              memory: 1024Mi
+          env:
+            - name: PAYARA_DEPLOYMENT_GROUP
+              value: payara-dg
+            - name: PAYARA_CONFIG_NAME
+              value: payara-config
+            - name: ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: kerberos-release-payara-server
+                  key: admin-password
+            - name: AS_ADMIN_MASTERPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: kerberos-release-payara-server
+                  key: admin-password
+            - name: PAYARA_DAS_HOST
+              value: kerberos-release-payara-server
+          volumeMounts:
+            - mountPath: /etc/krb5.conf
+              name: krb5-conf
+              subPath: krb5.conf
+            - mountPath: /etc/security/keytabs/service.keytab
+              name: keytab-conf
+              subPath: service.keytab
+      volumes:
+        - configMap:
+            name: server-krb5-config
+          name: krb5-conf
+        - configMap:
+            name: keytabs-configmap
+          name: keytab-conf
+---
+# Source: kerberos/charts/payara/templates/server-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kerberos-release-payara-server
+  labels:
+    helm.sh/chart: payara-0.1.0
+    app.kubernetes.io/name: payara
+    app.kubernetes.io/instance: kerberos-release
+    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: payara
+      app.kubernetes.io/instance: kerberos-release
+  template:
+    metadata:
+      labels:
+        helm.sh/chart: payara-0.1.0
+        app.kubernetes.io/name: payara
+        app.kubernetes.io/instance: kerberos-release
+        app.kubernetes.io/version: "0.1.0"
+        app.kubernetes.io/managed-by: Helm
+    spec:
+      serviceAccountName: kerberos-release-payara
+      securityContext:
+        {}
+      containers:
+        - name: server-sidecar
+          securityContext:
+            {}
+          image: "payara-node:0.1.0"
+          imagePullPolicy: IfNotPresent
+          command:
+            - /opt/payara/scripts/deploy.sh
+          env:
+            - name: PAYARA_DEPLOYMENT_GROUP
+              value: payara-dg
+            - name: PAYARA_CONFIG_NAME
+              value: payara-config
+            - name: WORKER_DEPLOYMENT_NAME
+              value: server
+            - name: VERSION
+              value: "0.1"
+            - name: INITIAL_DELAY_SEC
+              value: "30"
+            - name: ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: kerberos-release-payara-server
+                  key: admin-password
+            - name: PAYARA_DAS_HOST
+              value: kerberos-release-payara-server
+        - name: server
+          securityContext:
+            {}
+          image: "payara-server:0.1.0"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: server-http
+              containerPort: 4848
+              protocol: TCP
+          livenessProbe:
+            exec:
+              command:
+                - /bin/bash
+                - /opt/payara/k8s/ready.sh
+            initialDelaySeconds: 90
+            periodSeconds: 10
+            timeoutSeconds: 30
+          readinessProbe:
+            exec:
+              command:
+                - /bin/bash
+                - /opt/payara/k8s/ready.sh
+            initialDelaySeconds: 90
+            periodSeconds: 10
+            timeoutSeconds: 30
+          resources:
+            limits:
+              cpu: 2000m
+              memory: 2048Mi
+            requests:
+              cpu: 1000m
+              memory: 1024Mi
+          env:
+            - name: DEPLOY_PROPS
+              value: '--keepState=false --precompilejsp=false --availabilityEnabled=false --asyncreplication=false --name=spnego-0.1 --verify=false --force=true --contextroot=/spnego --enabled=true --properties=implicitCdiEnabled=true:preserveAppScopedResources=false:cdiDevModeEnabled=false --target=payara-dg'
+            - name: ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: kerberos-release-payara-server
+                  key: admin-password
+            - name: AS_ADMIN_MASTERPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: kerberos-release-payara-server
+                  key: admin-password
+            - name: POSTBOOT_COMMANDS
+              value: /opt/payara/k8s/commands/post-boot-commands.asadmin
+          volumeMounts:
+            - mountPath: /opt/payara/k8s/commands/post-boot-commands.asadmin
+              name: server-configmap
+              subPath: post-boot-commands.asadmin
+            - mountPath: /opt/payara/scripts/init_2_change_password.sh
+              name: server-configmap
+              subPath: init_2_change_password.sh
+            - mountPath: /opt/payara/appserver/glassfish/domains/domain1/config/login.conf
+              name: server-configmap
+              subPath: login.conf
+            - mountPath: /etc/krb5.conf
+              name: krb5-conf
+              subPath: krb5.conf
+            - mountPath: /opt/payara/appserver/glassfish/domains/domain1/config/krb5.conf
+              name: krb5-conf
+              subPath: krb5.conf
+            - mountPath: /etc/security/keytabs/service.keytab
+              name: keytab-conf
+              subPath: service.keytab
+            - mountPath: /opt/payara/appserver/glassfish/domains/domain1/config/service.keytab
+              name: keytab-conf
+              subPath: service.keytab
+      volumes:
+        - configMap:
+            name: server-configmap
+          name: server-configmap
+        - configMap:
+            name: server-krb5-config
+          name: krb5-conf
+        - configMap:
+            name: keytabs-configmap
+          name: keytab-conf

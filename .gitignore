@@ -1,0 +1,44 @@
+# MacOS
+.DS_Store
+
+*.tgz
+*.tar
+# Various IDEs
+.project
+.idea/
+*.tmproj
+.vscode/
+ovh*.yml
+job.yaml
+test_list.txt
+*.log
+nb-configuration.xml
+.settings
+kubeconfig.yaml
+
+### Maven ###
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+
+### VS Code ###
+.vscode
+.devcontainer
+
+### Java ###
+*.class
+*.classpath
+
+# Package Files #
+*.jar
+*.war
+*.ear
+
+#My script
+reset.sh
+notes

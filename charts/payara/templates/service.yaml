@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "payara.fullname" . }}-server
+  labels:
+    {{- include "payara.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.server.service.type }}
+  ports:
+    - port: {{ .Values.server.service.port }}
+      targetPort: server-http
+      protocol: TCP
+      name: server-http
+  selector:
+    {{- include "payara.selectorLabels" . | nindent 4 }}
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "payara-node.fullname" . }}
+  labels:
+    {{- include "payara-node.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.node.service.type }}
+  ports:
+    - port: {{ .Values.node.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "payara-node.selectorLabels" . | nindent 4 }}

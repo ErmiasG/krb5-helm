@@ -1,0 +1,29 @@
+
+global:
+  realm:  &default_realm example.ai
+  basedn: &baseDN dc=example,dc=ai
+  adminName: &admin_name cn=admin,dc=example,dc=ai
+  adminPassword: &admin_password adminpw
+  serverName: &server_name server
+  keytabConfigmap: &keytabs_configmap keytabs-configmap
+kerberos:
+  keytab:
+    configmap: *keytabs_configmap
+  kdc:
+    password: *admin_password
+  krb5:
+    default_realm: *default_realm
+  ldap:
+    basedn: *baseDN
+    domain: *default_realm
+    ou: "Example Inc."
+
+payara:
+  node:
+    fullnameOverride: *server_name
+  ldap:
+    jndilookupname: *baseDN
+    property:
+      security:
+        principal: *admin_name
+        credentials: *admin_password

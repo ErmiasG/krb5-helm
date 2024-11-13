@@ -1,2 +1,2 @@
 # krb5-helm
-Helm chart for deploying Kerberos for testing
+Helm chart for deploying Kerberos and test spnego auth

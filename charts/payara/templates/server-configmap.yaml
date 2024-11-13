@@ -1,0 +1,76 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: server-configmap
+data:
+  init_2_change_password.sh: |-
+    #!/bin/bash
+
+    echo "AS_ADMIN_MASTERPASSWORD=changeit
+    AS_ADMIN_NEWMASTERPASSWORD=$ADMIN_PASSWORD" > /tmp/masterpwdfile
+
+    echo "AS_ADMIN_PASSWORD=admin
+    AS_ADMIN_NEWPASSWORD=$ADMIN_PASSWORD" > /tmp/adminpwdfile
+
+    "${PAYARA_DIR}"/bin/asadmin --passwordfile=/tmp/masterpwdfile change-master-password --savemasterpassword
+    echo "AS_ADMIN_MASTERPASSWORD=$ADMIN_PASSWORD" >> "${PASSWORD_FILE}"
+
+    "${PAYARA_DIR}"/bin/asadmin --user="${ADMIN_USER}" --passwordfile="${PASSWORD_FILE}" start-domain "${DOMAIN_NAME}"
+    # This (--hostawarepartitioning true) need to be set here because it needs a restart and can not be set in post boot commands.
+    "${PAYARA_DIR}"/bin/asadmin --user="${ADMIN_USER}" --passwordfile="${PASSWORD_FILE}" set-hazelcast-configuration --hostawarepartitioning true --clustermode kubernetes --kubernetesServiceName {{ include "payara-node.fullname" . }} --kubernetesNamespace {{ .Release.Namespace }}
+    "${PAYARA_DIR}"/bin/asadmin --user="${ADMIN_USER}" --passwordfile=/tmp/adminpwdfile --interactive=false change-admin-password
+
+    echo "AS_ADMIN_PASSWORD=$ADMIN_PASSWORD" > "$PASSWORD_FILE"
+    
+    cp /etc/krb5.conf /opt/payara/appserver/glassfish/domains/domain1/config/
+    cp /etc/security/keytabs/service.keytab /opt/payara/appserver/glassfish/domains/domain1/config/
+
+    "${PAYARA_DIR}"/bin/asadmin --user="${ADMIN_USER}" --passwordfile="${PASSWORD_FILE}" enable-secure-admin
+    "${PAYARA_DIR}"/bin/asadmin --user="${ADMIN_USER}" --passwordfile="${PASSWORD_FILE}" stop-domain "$DOMAIN_NAME"
+
+    rm -rf /tmp/masterpwdfile
+    rm -rf /tmp/adminpwdfile
+  post-boot-commands.asadmin: |-
+    set resources.external-jndi-resource.ldap/LdapResource.enabled=true
+    set resources.external-jndi-resource.ldap/LdapResource.property.java\.naming\.provider\.url=ldap://{{ .Release.Name }}-ldap.{{ $.Release.Namespace }}.svc.cluster.local:389
+    set resources.external-jndi-resource.ldap/LdapResource.property.java\.naming\.security\.authentication={{ .Values.ldap.property.security.authentication }}
+    set resources.external-jndi-resource.ldap/LdapResource.property.java\.naming\.security\.principal={{ .Values.ldap.property.security.principal }}
+    set resources.external-jndi-resource.ldap/LdapResource.property.java\.naming\.security\.credentials={{ .Values.ldap.property.security.credentials }}
+    set resources.external-jndi-resource.ldap/LdapResource.property.java\.naming\.referral={{ .Values.ldap.property.referral }}
+    set resources.external-jndi-resource.ldap/LdapResource.factory-class={{ .Values.ldap.factory_class }}
+    set resources.external-jndi-resource.ldap/LdapResource.jndi-lookup-name={{ .Values.ldap.jndilookupname }}
+    set resources.external-jndi-resource.ldap/LdapResource.res-type={{ .Values.ldap.res_type }}
+  login.conf: |-
+    fileRealm {
+        com.sun.enterprise.security.auth.login.FileLoginModule required;
+    };
+
+    ldapRealm {
+            com.sun.enterprise.security.auth.login.LDAPLoginModule required;
+    };
+
+    solarisRealm {
+            com.sun.enterprise.security.auth.login.SolarisLoginModule required;
+    };
+
+    jdbcRealm {
+            com.sun.enterprise.security.ee.auth.login.JDBCLoginModule required;
+    };
+    jdbcDigestRealm {
+        com.sun.enterprise.security.ee.auth.login.JDBCDigestLoginModule required;
+    };
+    pamRealm {
+            com.sun.enterprise.security.ee.auth.login.PamLoginModule required;
+    };
+
+    spnego-client {
+            com.sun.security.auth.module.Krb5LoginModule required;
+    };
+
+    spnego-server {
+            com.sun.security.auth.module.Krb5LoginModule required
+            useKeyTab=true
+            storeKey=true
+            isInitiator=false
+            keyTab=service.keytab;
+    };

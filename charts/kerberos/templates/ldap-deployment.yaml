@@ -1,0 +1,131 @@
+{{- if .Values.ldap.standalone -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "kerberos.fullname" . }}-ldap
+  labels:
+    {{- include "kerberos-ldap.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "kerberos-ldap.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "kerberos-ldap.labels" . | nindent 8 }}
+	{{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "kerberos.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      initContainers:
+        - name: reconfigure
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - /scripts/krb-reconfigure-slapd.sh
+          env:
+          - name: LDAP_DOMAIN
+            value: {{ .Values.ldap.domain }}
+          - name: LDAP_OU
+            value: {{ .Values.ldap.ou }}
+          - name: ADMIN_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: {{ template "kerberos.fullname" . }}
+                key: master-password
+          volumeMounts:
+          - mountPath: /kerberos/acl.ldif
+            name: kdc-conf
+            subPath: acl.ldif
+          - name: {{ .Values.ldap.persistence.name }}
+            mountPath: /var/lib/ldap
+            subPath: data
+          - name: {{ .Values.ldap.persistence.name }}
+            mountPath: /etc/ldap/slapd.d
+            subPath: config-data
+        - name: add-users
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["/bin/sh", "-c"]
+          args:
+            - /scripts/start-slapd.sh &&
+              /scripts/add-users.sh /ldap/users.ldif
+          env:
+          - name: ADMIN_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: {{ template "kerberos.fullname" . }}
+                key: master-password
+          volumeMounts:
+          - mountPath: /ldap/users.ldif
+            name: users-conf
+            subPath: users.ldif
+          - name: {{ .Values.ldap.persistence.name }} 
+            mountPath: /var/lib/ldap
+            subPath: data
+          - name: {{ .Values.ldap.persistence.name }} 
+            mountPath: /etc/ldap/slapd.d
+            subPath: config-data
+      containers:
+      - name: ldap
+        resources:
+          {{- toYaml .Values.resources | nindent 12 }}
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        command:
+          - slapd
+        args:
+          - -h
+          - "ldap:/// ldapi:///"
+          - -d
+          - "2"
+        ports:
+        - containerPort: {{ .Values.ldap.tcp.port }}
+          name: {{ .Values.ldap.tcp.name }}
+          protocol: TCP
+        livenessProbe:
+          tcpSocket:
+            port: {{ .Values.ldap.tcp.name }}
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          failureThreshold: 10
+        readinessProbe:
+          tcpSocket:
+            port: {{ .Values.ldap.tcp.name }}
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          failureThreshold: 10
+        volumeMounts:
+        - name: {{ .Values.ldap.persistence.name }} 
+          mountPath: /var/lib/ldap
+          subPath: data
+        - name: {{ .Values.ldap.persistence.name }} 
+          mountPath: /etc/ldap/slapd.d
+          subPath: config-data
+      volumes:
+      - name: kdc-conf
+        configMap:
+          name: {{ template "kerberos.fullname" . }}-kdc-config
+      - name: users-conf
+        configMap:
+          name: {{ template "kerberos.fullname" . }}-users-config
+      - name: {{ .Values.ldap.persistence.name }}   
+{{- if .Values.ldap.persistence.enabled }}
+        persistentVolumeClaim:
+          claimName: {{ .Values.ldap.persistence.existingClaim }}
+{{- else }}
+        emptyDir: {}
+{{- end -}}
+{{- end -}}

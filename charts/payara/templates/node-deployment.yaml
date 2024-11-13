@@ -1,0 +1,123 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "payara-node.fullname" . }}
+  labels:
+    {{- include "payara-node.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.node.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "payara-node.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "payara-node.labels" . | nindent 8 }}
+	{{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "payara.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      initContainers:
+      - name: wait-for-server
+        image: "{{ .Values.node.image.repository }}:{{ .Values.node.image.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: {{ .Values.node.image.pullPolicy }}
+        command:
+            - /opt/payara/scripts/wait-for-admin.sh
+        env:
+          - name: PAYARA_DEPLOYMENT_GROUP
+            value: payara-dg
+          - name: PAYARA_CONFIG_NAME
+            value: payara-config
+          - name: ADMIN_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "payara.fullname" . }}-server
+                key: admin-password
+          - name: PAYARA_DAS_HOST
+            value: {{ include "payara.fullname" . }}-server
+      containers:
+        - name: node
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.node.image.repository }}:{{ .Values.node.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.node.image.pullPolicy }}
+          command: [ "/bin/sh", "-c" ]
+          args:
+            - echo 'AS_ADMIN_MASTERPASSWORD='$AS_ADMIN_MASTERPASSWORD'\nAS_ADMIN_PASSWORD='$ADMIN_PASSWORD'' > $PAYARA_PASSWORD_FILE;
+              ${SCRIPT_DIR}/entrypoint.sh;
+          ports:
+            - name: http
+              containerPort: {{ .Values.node.service.port }}
+          livenessProbe:
+            httpGet:
+              path: /spnego/api/health
+              port: http
+              scheme: HTTPS
+            periodSeconds: 3
+            failureThreshold: 210
+          readinessProbe:
+            httpGet:
+              path: /spnego/api/health
+              port: http
+              scheme: HTTPS
+            periodSeconds: 2
+            initialDelaySeconds: 30
+            failureThreshold: 210
+          startupProbe:
+            httpGet:
+              path: /spnego/api/health
+              port: http
+              scheme: HTTPS
+            periodSeconds: 5
+            initialDelaySeconds: 60
+            failureThreshold: 210
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          env:
+            - name: PAYARA_DEPLOYMENT_GROUP
+              value: payara-dg
+            - name: PAYARA_CONFIG_NAME
+              value: payara-config
+            - name: ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "payara.fullname" . }}-server
+                  key: admin-password
+            - name: AS_ADMIN_MASTERPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "payara.fullname" . }}-server
+                  key: admin-password
+            - name: PAYARA_DAS_HOST
+              value: {{ include "payara.fullname" . }}-server
+          {{- with .Values.node.volumeMounts }}
+          volumeMounts:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      {{- with .Values.node.volumes }}
+      volumes:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

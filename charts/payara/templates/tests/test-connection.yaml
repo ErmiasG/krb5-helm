@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ include "payara.fullname" . }}-test-connection"
+  labels:
+    {{- include "payara.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test
+spec:
+  containers:
+    - name: wget
+      image: busybox
+      command: ['wget']
+      args: ['{{ include "payara.fullname" . }}:{{ .Values.node.service.port }}']
+  restartPolicy: Never
