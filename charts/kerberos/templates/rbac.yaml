@@ -11,6 +11,7 @@ rules:
       - nodes
       - services
       - configmaps
+      - secrets
     verbs:
       - get
       - list

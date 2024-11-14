@@ -1,3 +1,4 @@
+{{- if .Values.deployPayara -}}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -33,3 +34,5 @@ subjects:
   - kind: ServiceAccount
     name: {{ include "payara.serviceAccountName" . }}
     namespace: {{ .Release.Namespace }}
+
+{{- end }}

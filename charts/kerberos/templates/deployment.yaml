@@ -52,10 +52,6 @@ spec:
         - name: add-users
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          # command: ["/bin/sh", "-c"]
-          # args:
-          #   - /scripts/start-slapd.sh &&
-          #     /scripts/add-users.sh /ldap/users.ldif
           command:
             - /bin/sh
             - -c
@@ -90,9 +86,6 @@ spec:
             - |-
               /scripts/start-slapd.sh
               /init_db.sh "$(REALM)" "$(MASTER_PASSWORD)"
-          # args:
-          #   - "$(REALM)"
-          #   - "$(MASTER_PASSWORD)"
           env:
           - name: REALM
             value: {{ .Values.krb5.default_realm | upper }}
@@ -113,8 +106,8 @@ spec:
             - |-
               /scripts/start-slapd.sh
              
-              kadmin.local -q "addprinc -randkey HTTP/{{ .Values.global.serverName }}.kerberos.svc.cluster.local@{{ .Values.krb5.default_realm | upper }}"
-              kadmin.local -q "ktadd -k /tmp/http_srv.keytab  HTTP/{{ .Values.global.serverName }}.kerberos.svc.cluster.local@{{ .Values.krb5.default_realm | upper }}"
+              kadmin.local -q "addprinc -randkey HTTP/{{ .Values.global.serverName }}.{{ $.Release.Namespace }}.svc.cluster.local@{{ .Values.krb5.default_realm | upper }}"
+              kadmin.local -q "ktadd -k /tmp/http_srv.keytab  HTTP/{{ .Values.global.serverName }}.{{ $.Release.Namespace }}.svc.cluster.local@{{ .Values.krb5.default_realm | upper }}"
               kadmin.local -q 'addprinc -randkey admin/admin'
               kadmin.local -q "ktadd -k /tmp/admin.keytab admin/admin"
 
@@ -136,10 +129,10 @@ spec:
               EOF
 
               # delete
-              kubectl --namespace {{ .Release.Namespace }} delete configmap {{ .Values.keytab.configmap }} --|| true
+              kubectl --namespace {{ .Release.Namespace }} delete secret {{ .Values.keytab.secretName }} --|| true
 
               # create it if it does not exist
-              kubectl --namespace {{ .Release.Namespace }} create configmap {{ .Values.keytab.configmap }} --from-file=service.keytab=/tmp/http_srv.keytab --from-file=admin.keytab=/tmp/admin.keytab  --|| true
+              kubectl --namespace {{ .Release.Namespace }} create secret generic {{ .Values.keytab.secretName }} --from-file=service.keytab=/tmp/http_srv.keytab --from-file=admin.keytab=/tmp/admin.keytab  --|| true
           env:
           - name: REALM
             value: {{ .Values.krb5.default_realm | upper }}

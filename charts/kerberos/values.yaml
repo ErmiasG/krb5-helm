@@ -41,7 +41,7 @@ securityContext: {}
 
 realm:  &default_realm example.com
 keytab:
-  configmap: keytabs-configmap
+  secretName: keytab-secret
 
 krb5:
   default_realm: *default_realm

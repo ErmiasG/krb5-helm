@@ -1,3 +1,4 @@
+{{- if .Values.deployPayara -}}
 apiVersion: v1
 kind: Service
 metadata:
@@ -31,3 +32,4 @@ spec:
       name: http
   selector:
     {{- include "payara-node.selectorLabels" . | nindent 4 }}
+{{- end }}

@@ -2,6 +2,8 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
+deployPayara: true
+
 server:
   replicaCount: 1
   image:
@@ -17,14 +19,16 @@ server:
     - name: server-configmap
       configMap:
         name: server-configmap
-    - name: krb5-conf
-      configMap:
-        name: server-krb5-config
-        optional: false
-    - name: keytab-conf
-      configMap:
-        name: keytabs-configmap
-        optional: false
+    - name: asadmin-commands
+      emptyDir: {}
+    # - name: krb5-conf
+    #   configMap:
+    #     name: server-krb5-config
+    #     optional: false
+    # - name: keytab-conf
+    #   configMap:
+    #     name: keytabs-configmap
+    #     optional: false
     # - name: spnego-app-configmap
     #   configMap:
     #     name: spnego-app
@@ -38,17 +42,14 @@ server:
     - name: server-configmap
       mountPath: /opt/payara/appserver/glassfish/domains/domain1/config/login.conf
       subPath: login.conf
-    - name: krb5-conf
-      mountPath: /etc/krb5.conf
-      subPath: krb5.conf
+    - mountPath: /opt/payara/appserver/glassfish/domains/domain1/asadmin-commands.txt
+      name: asadmin-commands
+      subPath: asadmin-commands.txt 
     # - name: krb5-conf
-    #   mountPath: /opt/payara/appserver/glassfish/domains/domain1/config/krb5.conf
+    #   mountPath: /etc/krb5.conf
     #   subPath: krb5.conf
-    - name: keytab-conf
-      mountPath: /etc/security/keytabs/service.keytab
-      subPath: service.keytab
     # - name: keytab-conf
-    #   mountPath: /opt/payara/appserver/glassfish/domains/domain1/config/service.keytab
+    #   mountPath: /etc/security/keytabs/service.keytab
     #   subPath: service.keytab
     # - name: spnego-app-configmap
     #   mountPath: /opt/payara/k8s/spnego.war
@@ -69,15 +70,15 @@ node:
       configMap:
         name: server-krb5-config
         optional: false
-    - name: keytab-conf
-      configMap:
-        name: keytabs-configmap
+    - name: keytab-secret
+      secret:
+        secretName: keytab-secret
         optional: false
   volumeMounts: 
     - name: krb5-conf
       mountPath: /etc/krb5.conf
       subPath: krb5.conf
-    - name: keytab-conf
+    - name: keytab-secret
       mountPath: /etc/security/keytabs/service.keytab
       subPath: service.keytab
 
@@ -126,14 +127,17 @@ securityContext: {}
 ingress:
   enabled: false
   className: ""
-  annotations: {}
-    # kubernetes.io/ingress.class: nginx
-    # kubernetes.io/tls-acme: "true"
+  annotations:     
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
+    nginx.ingress.kubernetes.io/ssl-passthrough: "true"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  ingressClassName: nginx
   hosts:
-    - host: chart-example.local
+    - host: server.cluster.local
       paths:
         - path: /
-          pathType: ImplementationSpecific
+          pathType: Prefix
   tls: []
   #  - secretName: chart-example-tls
   #    hosts:

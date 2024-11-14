@@ -2,7 +2,7 @@
 
 export KUBECONFIG=kubeconfig.yml
 
-NAMESPACE=kerberos
+NAMESPACE=hopsworks
 
 helm template --debug --dry-run=server kerberos-release . \
   --namespace $NAMESPACE \

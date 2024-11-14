@@ -1,3 +1,4 @@
+{{- if .Values.deployPayara -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -28,6 +29,13 @@ spec:
       serviceAccountName: {{ include "payara.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      initContainers:
+        - name: init-container
+          image: busybox
+          command: ["sh", "-c", "echo '' > /opt/payara/appserver/glassfish/domains/domain1/asadmin-commands.txt && chmod 666 /opt/payara/appserver/glassfish/domains/domain1/asadmin-commands.txt"]
+          volumeMounts:
+          - mountPath: /opt/payara/appserver/glassfish/domains/domain1/
+            name: asadmin-commands
       containers:
         - name: server-sidecar
           securityContext:
@@ -116,3 +124,4 @@ spec:
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+{{- end }}

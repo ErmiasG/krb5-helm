@@ -1,10 +1,10 @@
 
 global:
-  realm:  &default_realm example.ai
-  basedn: &baseDN dc=example,dc=ai
-  adminName: &admin_name cn=admin,dc=example,dc=ai
+  realm:  &default_realm hopsworks.ai
+  basedn: &baseDN dc=hopsworks,dc=ai
+  adminName: &admin_name cn=admin,dc=hopsworks,dc=ai
   adminPassword: &admin_password adminpw
-  serverName: &server_name server
+  serverName: &server_name hopsworks
   keytabConfigmap: &keytabs_configmap keytabs-configmap
 kerberos:
   keytab:
@@ -16,9 +16,13 @@ kerberos:
   ldap:
     basedn: *baseDN
     domain: *default_realm
-    ou: "Example Inc."
+    ou: "Hopsworks Inc."
+
+krb-client:
+  default_realm: *default_realm
 
 payara:
+  deployPayara: true
   node:
     fullnameOverride: *server_name
   ldap:

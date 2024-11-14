@@ -4,6 +4,8 @@
 
 replicaCount: 1
 
+default_realm: example.com
+
 image:
   repository: krb-client
   pullPolicy: IfNotPresent
@@ -31,19 +33,12 @@ volumes:
   - name: krb5-conf
     configMap:
       name: server-krb5-config
-# - name: foo
-#   secret:
-#     secretName: mysecret
-#     optional: false
 
 # Additional volumeMounts on the output Deployment definition.
 volumeMounts:
   - name: krb5-conf
     mountPath: /etc/krb5.conf
     subPath: krb5.conf
-# - name: foo
-#   mountPath: "/etc/foo"
-#   readOnly: true
 
 nodeSelector: {}
 

@@ -40,6 +40,11 @@ spec:
               while true; do
                 sleep 10
               done
+          env:
+          - name: REALM
+            value: {{ .Values.default_realm | upper }}
+          - name: SERVER
+            value: {{ .Values.global.serverName }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           {{- with .Values.volumeMounts }}

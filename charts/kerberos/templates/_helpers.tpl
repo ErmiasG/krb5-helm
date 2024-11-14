@@ -101,7 +101,7 @@ Create the name of the service account to use
 - name: {{ .Values.ldap.persistence.name }}
 {{- if .Values.ldap.persistence.enabled }}
   persistentVolumeClaim:
-    claimName: {{ .Values.ldap.persistence.existingClaim }}
+    claimName: {{ .Values.ldap.persistence.name }}
 {{- else }}
   emptyDir: {}
 {{- end -}}

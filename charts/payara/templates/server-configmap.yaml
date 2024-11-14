@@ -1,3 +1,4 @@
+{{- if .Values.deployPayara -}}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -40,6 +41,7 @@ data:
     set resources.external-jndi-resource.ldap/LdapResource.factory-class={{ .Values.ldap.factory_class }}
     set resources.external-jndi-resource.ldap/LdapResource.jndi-lookup-name={{ .Values.ldap.jndilookupname }}
     set resources.external-jndi-resource.ldap/LdapResource.res-type={{ .Values.ldap.res_type }}
+    set-asadmin-recorder-configuration --enabled true --filterCommands true --filteredCommands "version,_(.*),list(.*),get(.*),uptime,enable-asadmin-recorder,disable-asadmin-recorder,set-asadmin-recorder-configuration,asadmin-recorder-enabled,start-instance,deploy"
   login.conf: |-
     fileRealm {
         com.sun.enterprise.security.auth.login.FileLoginModule required;
@@ -74,8 +76,9 @@ data:
         storeKey=true
         isInitiator=false
         doNotPrompt=true
-        principal="HTTP/{{ include "payara-node.fullname" . }}.kerberos.svc.cluster.local@{{ .Values.global.realm | upper }}"
+        principal="HTTP/{{ include "payara-node.fullname" . }}.{{ $.Release.Namespace }}.svc.cluster.local@{{ .Values.global.realm | upper }}"
         keyTab="/etc/security/keytabs/service.keytab";
     };
 #   domain.xml: |-
 # {{ tpl (.Files.Get "resources/domain.xml") . | indent 8 }}
+{{- end }}
