@@ -1,0 +1,32 @@
+{{- if and .Values.deployPayara -}}
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-asadmin-commands
+  labels:
+    name: pv-asadmin-commands
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteMany
+  hostPath:
+    path: "/tmp/hostpath_pv/asadmin-commands.txt"
+    type: FileOrCreate
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pv-claim-asadmin-commands
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: ""
+  resources:
+    requests:
+      storage: 1Gi
+  selector:
+    matchLabels:
+      name: pv-asadmin-commands
+{{- end }}

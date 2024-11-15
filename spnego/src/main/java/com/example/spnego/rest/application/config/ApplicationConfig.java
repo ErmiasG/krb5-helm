@@ -14,7 +14,8 @@ public class ApplicationConfig extends Application {
     return Stream.of(
       com.example.spnego.rest.ProtectedResources.class,
       com.example.spnego.rest.UnprotectedResources.class,
-      com.example.spnego.rest.HealthResources.class
+      com.example.spnego.rest.HealthResources.class,
+      com.example.spnego.rest.AllowCORSFilter.class
     ).collect(Collectors.toSet());
   }
 }

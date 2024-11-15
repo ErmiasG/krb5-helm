@@ -58,13 +58,15 @@ spec:
             - |-
               /scripts/start-slapd.sh
               /scripts/add-users.sh /ldap/users.ldif
-
+              
               kdb5_ldap_util -D cn=admin,{{ .Values.ldap.basedn }} -w $ADMIN_PASSWORD create -subtrees {{ .Values.ldap.basedn }} -r {{ .Values.krb5.default_realm | upper }} -s -H ldap:/// -P kdcdbkey
 
               kdb5_ldap_util -D cn=admin,{{ .Values.ldap.basedn }} -w $ADMIN_PASSWORD stashsrvpw -f /var/kerberos/krb5kdc/service.keyfile cn=admin,{{ .Values.ldap.basedn }} <<EOF
               $ADMIN_PASSWORD
               $ADMIN_PASSWORD
               EOF
+
+              /scripts/addprinc.sh /ldap/users.ldif
           env:
           - name: ADMIN_PASSWORD
             valueFrom:
@@ -107,26 +109,11 @@ spec:
               /scripts/start-slapd.sh
              
               kadmin.local -q "addprinc -randkey HTTP/{{ .Values.global.serverName }}.{{ $.Release.Namespace }}.svc.cluster.local@{{ .Values.krb5.default_realm | upper }}"
-              kadmin.local -q "ktadd -k /tmp/http_srv.keytab  HTTP/{{ .Values.global.serverName }}.{{ $.Release.Namespace }}.svc.cluster.local@{{ .Values.krb5.default_realm | upper }}"
+              kadmin.local -q "addprinc -randkey HTTP/localhost@{{ .Values.krb5.default_realm | upper }}"
+              kadmin.local -q "ktadd -k /tmp/http_srv.keytab HTTP/{{ .Values.global.serverName }}.{{ $.Release.Namespace }}.svc.cluster.local@{{ .Values.krb5.default_realm | upper }}"
+              kadmin.local -q "ktadd -k /tmp/http_srv.keytab HTTP/localhost@{{ .Values.krb5.default_realm | upper }}"
               kadmin.local -q 'addprinc -randkey admin/admin'
               kadmin.local -q "ktadd -k /tmp/admin.keytab admin/admin"
-
-              kadmin.local -q "addprinc -x dn="uid=john,ou=People,{{ .Values.ldap.basedn }}" john" <<EOF 
-              johnldap
-              johnldap
-              EOF
-              kadmin.local -q "addprinc -x dn="uid=george,ou=People,{{ .Values.ldap.basedn }}" george" <<EOF 
-              georgeldap
-              georgeldap
-              EOF
-              kadmin.local -q "addprinc -x dn="uid=tkelly,ou=People,{{ .Values.ldap.basedn }}" tkelly" <<EOF 
-              tkellyldap
-              tkellyldap
-              EOF
-              kadmin.local -q "addprinc -x dn="uid=tlabonte,ou=People,{{ .Values.ldap.basedn }}" tlabonte" <<EOF 
-              tlabonteldap
-              tlabonteldap
-              EOF
 
               # delete
               kubectl --namespace {{ .Release.Namespace }} delete secret {{ .Values.keytab.secretName }} --|| true

@@ -60,7 +60,7 @@ objectClass: posixAccount
 objectClass: top
 uid: tkelly
 #classOfService: gold
-userpassword: tkellyldap
+userPassword: tkellyldap
 facsimiletelephonenumber: +1 408 555 1992
 givenname: Timothy
 cn: Timothy Kelly
@@ -85,7 +85,7 @@ objectClass: posixAccount
 objectClass: top
 uid: tlabonte
 #classOfService: gold
-userpassword: tlabonteldap
+userPassword: tlabonteldap
 facsimiletelephonenumber: +1 408 555 9751
 givenname: Tim
 cn: Tim Labonte
@@ -110,7 +110,7 @@ objectClass: posixAccount
 objectClass: top
 uid: tmason
 #classOfService: silver
-userpassword: tmasonldap
+userPassword: tmasonldap
 facsimiletelephonenumber: +1 408 555 9751
 givenname: Torrey
 cn: Torrey Mason
@@ -134,7 +134,7 @@ objectClass: posixAccount
 objectClass: top
 uid: tmorris
 #classOfService: gold
-userpassword: tmorrisldap
+userPassword: tmorrisldap
 facsimiletelephonenumber: +1 408 555 8473
 givenname: Ted
 cn: Ted Morris
@@ -158,7 +158,7 @@ objectClass: posixAccount
 objectClass: top
 uid: tpierce
 #classOfService: gold
-userpassword: tpierceldap
+userPassword: tpierceldap
 facsimiletelephonenumber: +1 408 555 9332
 givenname: Tobias
 cn: Tobias Pierce
@@ -182,7 +182,7 @@ objectClass: posixAccount
 objectClass: top
 uid: trigden
 #classOfService: gold
-userpassword: trigdenldap
+userPassword: trigdenldap
 facsimiletelephonenumber: +1 408 555 8473
 givenname: Torrey
 cn: Torrey Rigden
@@ -206,7 +206,7 @@ objectClass: posixAccount
 objectClass: top
 uid: tschmith
 #classOfService: gold
-userpassword: tschmithldap
+userPassword: tschmithldap
 facsimiletelephonenumber: +1 408 555 1992
 givenname: Tobias
 cn: Tobias Schmith
@@ -230,7 +230,7 @@ objectClass: posixAccount
 objectClass: top
 uid: tschneid
 #classOfService: silver
-userpassword: tschneidldap
+userPassword: tschneidldap
 facsimiletelephonenumber: +1 408 555 8473
 givenname: Torrey
 cn: Torrey Schneider
@@ -254,7 +254,7 @@ objectClass: posixAccount
 objectClass: top
 uid: ttully
 #classOfService: silver
-userpassword: ttullyldap
+userPassword: ttullyldap
 facsimiletelephonenumber: +1 408 555 0111
 givenname: Torrey
 cn: Torrey Tully
@@ -278,7 +278,7 @@ objectClass: posixAccount
 objectClass: top
 uid: tward
 #classOfService: silver
-userpassword: twardldap
+userPassword: twardldap
 facsimiletelephonenumber: +1 408 555 4661
 givenname: Tobias
 cn: Tobias Ward
@@ -302,7 +302,7 @@ objectClass: posixAccount
 objectClass: top
 uid: wlutz
 #classOfService: silver
-userpassword: wlutzldap
+userPassword: wlutzldap
 facsimiletelephonenumber: +1 408 555 9332
 givenname: Wendy
 cn: Wendy Lutz

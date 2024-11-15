@@ -1,0 +1,10 @@
+set resources.external-jndi-resource.ldap/LdapResource.enabled=true
+    set resources.external-jndi-resource.ldap/LdapResource.property.java\.naming\.provider\.url=ldap://{{ .Release.Name }}-ldap.{{ $.Release.Namespace }}.svc.cluster.local:389
+    set resources.external-jndi-resource.ldap/LdapResource.property.java\.naming\.security\.authentication={{ .Values.ldap.property.security.authentication }}
+    set resources.external-jndi-resource.ldap/LdapResource.property.java\.naming\.security\.principal={{ .Values.ldap.property.security.principal }}
+    set resources.external-jndi-resource.ldap/LdapResource.property.java\.naming\.security\.credentials={{ .Values.ldap.property.security.credentials }}
+    set resources.external-jndi-resource.ldap/LdapResource.property.java\.naming\.referral={{ .Values.ldap.property.referral }}
+    set resources.external-jndi-resource.ldap/LdapResource.factory-class={{ .Values.ldap.factory_class }}
+    set resources.external-jndi-resource.ldap/LdapResource.jndi-lookup-name={{ .Values.ldap.jndilookupname }}
+    set resources.external-jndi-resource.ldap/LdapResource.res-type={{ .Values.ldap.res_type }}
+    set-asadmin-recorder-configuration --enabled true --filterCommands true --filteredCommands "version,_(.*),list(.*),get(.*),uptime,enable-asadmin-recorder,disable-asadmin-recorder,set-asadmin-recorder-configuration,asadmin-recorder-enabled,start-instance,deploy"

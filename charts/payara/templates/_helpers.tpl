@@ -93,3 +93,11 @@ Create the name of the service account to use
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
+
+{{- define "payara.principal" -}}
+{{- if .Values.principal.useLocalhost -}}
+HTTP/localhost@{{ .Values.global.realm | upper }}
+{{- else -}}
+HTTP/{{ include "payara-node.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local@{{ .Values.global.realm | upper }}
+{{- end }}
+{{- end }}

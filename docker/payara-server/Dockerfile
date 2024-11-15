@@ -41,8 +41,6 @@ rm -rf \
 
 COPY --chown=payara:payara login.conf /opt/payara/k8s/
 
-RUN cat /opt/payara/k8s/login.conf >> /opt/payara/appserver/glassfish/domains/domain1/config/login.conf
-
 COPY --chown=payara:payara scripts/ready.sh /opt/payara/k8s/ready.sh
 RUN chmod a+x /opt/payara/k8s/ready.sh
 

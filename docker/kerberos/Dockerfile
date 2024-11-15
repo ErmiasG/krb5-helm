@@ -13,6 +13,9 @@ COPY resources/schema_convert.conf /kerberos/schema_convert.conf
 COPY scripts/krb-reconfigure-slapd.sh /scripts/krb-reconfigure-slapd.sh
 RUN chmod a+x /scripts/krb-reconfigure-slapd.sh
 
+COPY scripts/addprinc.sh /scripts/addprinc.sh
+RUN chmod a+x /scripts/addprinc.sh
+
 RUN mkdir /tmp/krb_ldif_output  
 
 RUN mkdir -p /var/log/kerberos 

@@ -1,0 +1,11 @@
+#!/bin/bash
+
+ASADMIN_COMMAND_RECORD="${PAYARA_DIR}"/glassfish/domains/domain1/asadmin-commands.txt
+
+if [[ -f $ASADMIN_COMMAND_RECORD && -s $ASADMIN_COMMAND_RECORD ]]; then
+  echo "Adding $ASADMIN_COMMAND_RECORD to $POSTBOOT_COMMANDS_FINAL"
+  echo >> $POSTBOOT_COMMANDS_FINAL
+  cat $ASADMIN_COMMAND_RECORD >> $POSTBOOT_COMMANDS_FINAL
+else
+  echo "$ASADMIN_COMMAND_RECORD is empty."
+fi

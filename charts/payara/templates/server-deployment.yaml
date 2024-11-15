@@ -32,10 +32,14 @@ spec:
       initContainers:
         - name: init-container
           image: busybox
-          command: ["sh", "-c", "echo '' > /opt/payara/appserver/glassfish/domains/domain1/asadmin-commands.txt && chmod 666 /opt/payara/appserver/glassfish/domains/domain1/asadmin-commands.txt"]
+          command:
+            - /bin/sh
+            - -c
+            - |-
+              chmod 666 /data/asadmin-commands.txt
           volumeMounts:
-          - mountPath: /opt/payara/appserver/glassfish/domains/domain1/
-            name: asadmin-commands
+          - mountPath: /data/asadmin-commands.txt
+            name: asadmin-commands-persistent-storage
       containers:
         - name: server-sidecar
           securityContext:
@@ -90,8 +94,6 @@ spec:
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           env:
-            - name: DEPLOY_PROPS
-              value: '--keepState=false --precompilejsp=false --availabilityEnabled=false --asyncreplication=false --name=spnego-0.1 --verify=false --force=true --contextroot=/spnego --enabled=true --properties=implicitCdiEnabled=true:preserveAppScopedResources=false:cdiDevModeEnabled=false --target=payara-dg'
             - name: ADMIN_PASSWORD
               valueFrom:
                 secretKeyRef:
