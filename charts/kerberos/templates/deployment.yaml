@@ -30,7 +30,7 @@ spec:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       initContainers:
         - name: reconfigure
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          image: "{{ include "kerberos.image_repository" . }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command:
             - /scripts/krb-reconfigure-slapd.sh
@@ -50,7 +50,7 @@ spec:
             subPath: acl.ldif
 {{ include "kerberos.volumeMountsLdap" . | indent 10 }}
         - name: add-users
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          image: "{{ include "kerberos.image_repository" . }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command:
             - /bin/sh
@@ -80,7 +80,7 @@ spec:
 {{ include "kerberos.volumeMountsLdap" . | indent 10 }}
 {{ include "kerberos.volumeMountsKrb" . | indent 10 }}
         - name: init-db
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          image: "{{ include "kerberos.image_repository" . }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command:
             - /bin/sh
@@ -100,7 +100,7 @@ spec:
 {{ include "kerberos.volumeMountsLdap" . | indent 10 }}
 {{ include "kerberos.volumeMountsKrb" . | indent 10 }}
         - name: generate-keytab
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          image: "{{ include "kerberos.image_repository" . }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command:
             - /bin/sh
@@ -135,7 +135,7 @@ spec:
       - name: ldap
         resources:
           {{- toYaml .Values.resources | nindent 12 }}
-        image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+        image: "{{ include "kerberos.image_repository" . }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         command:
           - slapd
@@ -165,7 +165,7 @@ spec:
       - name: kdc
         resources:
           {{- toYaml .Values.resources | nindent 12 }}
-        image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+        image: "{{ include "kerberos.image_repository" . }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         command:
           - /usr/sbin/krb5kdc
@@ -190,7 +190,7 @@ spec:
       - name: kadmin
         resources:
           {{- toYaml .Values.resources | nindent 12 }}
-        image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+        image: "{{ include "kerberos.image_repository" . }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         command: ["/bin/sh", "-c"]
         args:

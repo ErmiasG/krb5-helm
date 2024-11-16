@@ -49,3 +49,11 @@ Selector labels
 app.kubernetes.io/name: {{ include "krb-client.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
+
+{{- define "krb-client.image_repository"  -}}
+{{- if and .Values.global .Values.global.image.repository -}}
+{{- .Values.global.image.repository -}}{{ .Values.image.repository }}
+{{- else }}
+{{ .Values.image.repository }}
+{{- end }}
+{{- end }}

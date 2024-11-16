@@ -135,3 +135,11 @@ Create the name of the service account to use
   mountPath: /etc/krb5.conf 
   subPath: krb5.conf
 {{- end }}
+
+{{- define "kerberos.image_repository"  -}}
+{{- if and .Values.global .Values.global.image.repository -}}
+{{- .Values.global.image.repository -}}{{ .Values.image.repository }}
+{{- else }}
+{{ .Values.image.repository }}
+{{- end }}
+{{- end }}

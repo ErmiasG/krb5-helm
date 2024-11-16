@@ -44,7 +44,7 @@ spec:
         - name: server-sidecar
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
-          image: "{{ .Values.node.image.repository }}:{{ .Values.node.image.tag | default .Chart.AppVersion }}"
+          image: "{{ include "payara-node.image_repository" . }}:{{ .Values.node.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.server.image.pullPolicy }}
           command:
             - /opt/payara/scripts/deploy.sh
@@ -69,7 +69,7 @@ spec:
         - name: server
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
-          image: "{{ .Values.server.image.repository }}:{{ .Values.server.image.tag | default .Chart.AppVersion }}"
+          image: "{{ include "payara.image_repository" . }}:{{ .Values.server.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.server.image.pullPolicy }}
           ports:
             - name: server-http

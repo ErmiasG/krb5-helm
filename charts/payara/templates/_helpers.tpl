@@ -101,3 +101,19 @@ HTTP/localhost@{{ .Values.global.realm | upper }}
 HTTP/{{ include "payara-node.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local@{{ .Values.global.realm | upper }}
 {{- end }}
 {{- end }}
+
+{{- define "payara.image_repository"  -}}
+{{- if and .Values.global.image .Values.global.image.repository -}}
+{{- .Values.global.image.repository -}}{{ .Values.server.image.repository }}
+{{- else }}
+{{ .Values.image.repository }}
+{{- end }}
+{{- end }}
+
+{{- define "payara-node.image_repository"  -}}
+{{- if and .Values.global.image .Values.global.image.repository -}}
+{{- .Values.global.image.repository -}}{{ .Values.node.image.repository }}
+{{- else }}
+{{ .Values.image.repository }}
+{{- end }}
+{{- end }}

@@ -31,7 +31,7 @@ spec:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       initContainers:
       - name: wait-for-server
-        image: "{{ .Values.node.image.repository }}:{{ .Values.node.image.tag | default .Chart.AppVersion }}"
+        image: "{{ include "payara-node.image_repository" . }}:{{ .Values.node.image.tag | default .Chart.AppVersion }}"
         imagePullPolicy: {{ .Values.node.image.pullPolicy }}
         command:
             - /opt/payara/scripts/wait-for-admin.sh
@@ -51,7 +51,7 @@ spec:
         - name: node
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
-          image: "{{ .Values.node.image.repository }}:{{ .Values.node.image.tag | default .Chart.AppVersion }}"
+          image: "{{ include "payara-node.image_repository" . }}:{{ .Values.node.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.node.image.pullPolicy }}
           command: [ "/bin/sh", "-c" ]
           args:

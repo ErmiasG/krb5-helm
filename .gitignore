@@ -36,7 +36,7 @@ buildNumber.properties
 
 # Package Files #
 *.jar
-*.war
+#*.war
 *.ear
 
 #My script
