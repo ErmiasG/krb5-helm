@@ -39,8 +39,6 @@ rm -rf \
  ${PAYARA_DIR}/glassfish/domains/${DOMAIN_NAME}/osgi-cache \
  ${PAYARA_DIR}/glassfish/domains/${DOMAIN_NAME}/logs
 
-COPY --chown=payara:payara login.conf /opt/payara/k8s/
-
 COPY --chown=payara:payara scripts/ready.sh /opt/payara/k8s/ready.sh
 RUN chmod a+x /opt/payara/k8s/ready.sh
 

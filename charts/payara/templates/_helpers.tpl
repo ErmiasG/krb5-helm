@@ -103,17 +103,17 @@ HTTP/{{ include "payara-node.fullname" . }}.{{ .Release.Namespace }}.svc.cluster
 {{- end }}
 
 {{- define "payara.image_repository"  -}}
-{{- if and .Values.global.image .Values.global.image.repository -}}
-{{- .Values.global.image.repository -}}{{ .Values.server.image.repository }}
-{{- else }}
-{{ .Values.image.repository }}
+{{- if and $.Values.global.image $.Values.global.image.repository -}}
+{{- $.Values.global.image.repository -}}{{ .Values.server.image.repository }}
+{{- else -}}
+{{ .Values.server.image.repository }}
 {{- end }}
 {{- end }}
 
 {{- define "payara-node.image_repository"  -}}
-{{- if and .Values.global.image .Values.global.image.repository -}}
-{{- .Values.global.image.repository -}}{{ .Values.node.image.repository }}
-{{- else }}
-{{ .Values.image.repository }}
+{{- if and $.Values.global.image $.Values.global.image.repository -}}
+{{- $.Values.global.image.repository -}}{{ .Values.node.image.repository }}
+{{- else -}}
+{{ .Values.node.image.repository }}
 {{- end }}
 {{- end }}
