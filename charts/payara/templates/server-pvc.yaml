@@ -1,4 +1,4 @@
-{{- if and .Values.deployPayara -}}
+{{- if and .Values.deployPayara .Values.createPV -}}
 apiVersion: v1
 kind: PersistentVolume
 metadata:

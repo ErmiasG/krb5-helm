@@ -1,0 +1,27 @@
+[
+    {
+        "name": "dev/ermias/kerberos/ldap",
+        "version": "env:VERSION",
+        "dockerFile": "docker/ldap/Dockerfile"
+    },
+    {
+        "name": "dev/ermias/kerberos/kerberos",
+        "version": "env:VERSION",
+        "dockerFile": "docker/kerberos/Dockerfile"
+    },
+    {
+        "name": "dev/ermias/kerberos/krb-client",
+        "version": "env:VERSION",
+        "dockerFile": "docker/krb-client/Dockerfile"
+    },
+    {
+        "name": "dev/ermias/kerberos/payara-server",
+        "version": "env:VERSION",
+        "dockerFile": "docker/payara-server/Dockerfile"
+    },
+    {
+        "name": "dev/ermias/kerberos/payara-node",
+        "version": "env:VERSION",
+        "dockerFile": "docker/payara-node/Dockerfile"
+    }
+]

@@ -3,7 +3,7 @@
 # Declare variables to be passed into your templates.
 
 deployPayara: true
-
+createPV: false
 
 server:
   replicaCount: 1
@@ -20,9 +20,9 @@ server:
     - name: server-configmap
       configMap:
         name: server-configmap
-    - name: asadmin-commands-persistent-storage
-      persistentVolumeClaim:
-        claimName: pv-claim-asadmin-commands
+    # - name: asadmin-commands-persistent-storage
+    #   persistentVolumeClaim:
+    #     claimName: pv-claim-asadmin-commands
     # - name: asadmin-commands-persistent-storage
     #   hostPath:
     #     path: /var/local/payara/asadmin-commands.txt
@@ -48,11 +48,11 @@ server:
     - name: server-configmap
       mountPath: /opt/payara/scripts/init_3_krb_auth_module.sh
       subPath: init_3_krb_auth_module.sh
-    - name: server-configmap
-      mountPath: /opt/payara/scripts/init_4_copy_asadmin_record.sh
-      subPath: init_4_copy_asadmin_record.sh
-    - name: asadmin-commands-persistent-storage
-      mountPath: /opt/payara/appserver/glassfish/domains/domain1/asadmin-commands.txt
+    # - name: server-configmap
+    #   mountPath: /opt/payara/scripts/init_4_copy_asadmin_record.sh
+    #   subPath: init_4_copy_asadmin_record.sh
+    # - name: asadmin-commands-persistent-storage
+    #   mountPath: /opt/payara/appserver/glassfish/domains/domain1/asadmin-commands.txt
     # - name: krb5-conf
     #   mountPath: /etc/krb5.conf
     #   subPath: krb5.conf
@@ -104,7 +104,7 @@ ldap:
     attributes_binary: "entryUUID"
 
 principal:
-  useLocalhost: true
+  useLocalhost: false
 keyTabPath: /etc/security/keytabs/service.keytab
 keyTabName: service.keytab
 
@@ -138,7 +138,7 @@ securityContext: {}
   # runAsUser: 1000
 
 ingress:
-  enabled: false
+  enabled: true
   className: ""
   annotations:     
     nginx.ingress.kubernetes.io/rewrite-target: /
@@ -147,7 +147,7 @@ ingress:
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
   ingressClassName: nginx
   hosts:
-    - host: server.cluster.local
+    - host: hopsworks.ai.local
       paths:
         - path: /
           pathType: Prefix

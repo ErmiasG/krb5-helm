@@ -1,4 +1,4 @@
-FROM ldap:0.1.0
+FROM docker.hops.works/dev/ermias/kerberos/ldap:0.1.0
 
 RUN apt-get update && \   
     apt-get -qqy install krb5-kdc krb5-admin-server krb5-kdc-ldap 
