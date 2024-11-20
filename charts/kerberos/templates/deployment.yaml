@@ -1,3 +1,11 @@
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: kerberos-high-priority
+value: 1000000
+globalDefault: false
+description: "This priority class should be used for kerberos pod only."
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -25,6 +33,7 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      priorityClassName: kerberos-high-priority
       serviceAccountName: {{ include "kerberos.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}

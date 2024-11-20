@@ -139,7 +139,7 @@ securityContext: {}
 
 ingress:
   enabled: true
-  className: ""
+  className: nginx
   annotations:     
     nginx.ingress.kubernetes.io/rewrite-target: /
     nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
@@ -147,7 +147,7 @@ ingress:
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
   ingressClassName: nginx
   hosts:
-    - host: hopsworks.ai.local
+    - host: example.com.local
       paths:
         - path: /
           pathType: Prefix

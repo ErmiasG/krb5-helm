@@ -26,7 +26,7 @@ krb-client:
   default_realm: *default_realm
 
 payara:
-  deployPayara: true
+  deployPayara: false
   node:
     fullnameOverride: *server_name
   ldap:
