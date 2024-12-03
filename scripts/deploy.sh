@@ -1,7 +1,7 @@
 #!/bin/bash
 
-#export KUBECONFIG=kubeconfig.yaml
-export KUBECONFIG=~/Projects/Kube/OVH/kubeconfig.yml
+export KUBECONFIG=kubeconfig.yaml
+#export KUBECONFIG=~/Projects/Kube/OVH/kubeconfig.yml
 
 NAMESPACE=hopsworks
 

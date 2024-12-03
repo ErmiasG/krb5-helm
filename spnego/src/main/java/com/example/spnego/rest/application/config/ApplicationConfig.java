@@ -15,7 +15,8 @@ public class ApplicationConfig extends Application {
       com.example.spnego.rest.ProtectedResources.class,
       com.example.spnego.rest.UnprotectedResources.class,
       com.example.spnego.rest.HealthResources.class,
-      com.example.spnego.rest.AllowCORSFilter.class
+      com.example.spnego.rest.AllowCORSFilter.class,
+      com.example.spnego.rest.AuthResource.class
     ).collect(Collectors.toSet());
   }
 }

@@ -8,7 +8,7 @@ global:
   keytabConfigmap: &keytabs_configmap keytabs-configmap
 
   image:
-    repository: ""
+    repository: "docker.hops.works/dev/ermias/kerberos/"
 
 kerberos:
   keytab:
@@ -26,7 +26,7 @@ krb-client:
   default_realm: *default_realm
 
 payara:
-  deployPayara: false
+  deployPayara: true
   node:
     fullnameOverride: *server_name
   ldap:
