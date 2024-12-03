@@ -20,5 +20,5 @@ RUN mkdir /tmp/krb_ldif_output
 
 RUN mkdir -p /var/log/kerberos 
 
-COPY init_db.sh /init_db.sh
+COPY scripts/init_db.sh /init_db.sh
 RUN chmod a+x /init_db.sh
